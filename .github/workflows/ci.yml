@@ -1,0 +1,37 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup job
+        uses: joinself/github-actions-public/setup-job@main
+      - name: CI
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GHA_TOKEN }}
+          WORKFLOW_ID: ${{ github.run_id }}${{github.run_attempt}}
+        run: |
+          . ${GITHUB_WORKSPACE}/.ci/env
+
+          workflow="CI"
+          gh workflow run "${workflow}" -R joinself/demo-android-gha -r main -f id=${WORKFLOW_ID} -f git-ref=${CI_REF_NAME}
+
+          echo "Calling remote workflow: ${workflow} (${WORKFLOW_ID})"
+          for ((i = 0; i < 120; i++)); do
+            echo "Waiting for workflow to complete..."
+            conclusion=$(gh run list -R joinself/demo-android-gha --json name,conclusion --jq ".[] | select(.name==\"${workflow} (${WORKFLOW_ID})\") | .conclusion")
+            [[ "${conclusion}" == "success" ]] && echo "Workflow complete" && break
+            [[ "${conclusion}" == "failure" ]] && echo "Workflow failed" && exit 1
+            [[ "${i}" == "119" ]] && echo "Workflow timeout" && exit 1
+            sleep 15
+          done
