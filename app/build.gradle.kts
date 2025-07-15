@@ -21,7 +21,6 @@ androidGitVersion {
     isUntrackedIsDirty = false
     untrackedIsDirty = false
     format = "%tag%%-count%%-commit%%-branch%"
-    baseCode = 3
 }
 
 android {
