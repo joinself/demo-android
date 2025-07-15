@@ -42,8 +42,6 @@ git clone git@github.com:joinself/self-sdk-examples.git
 You can build and install from the command line
 
 ```bash
-cd self-sdk-examples/android/SelfDemo
-
 ./gradlew :app:assembleDebug
 
 adb -d install -r app/build/outputs/apk/debug/self-demo-debug.apk
