@@ -47,6 +47,7 @@ import com.joinself.app.demo.ui.screens.VerifyDocumentStartScreen
 import com.joinself.app.demo.ui.screens.VerifyEmailResultScreen
 import com.joinself.app.demo.ui.screens.VerifyEmailStartScreen
 import com.joinself.app.demo.ui.screens.VerifySelectionScreen
+import com.joinself.common.Constants
 import com.joinself.common.CredentialType
 import com.joinself.common.exception.InvalidCredentialException
 import com.joinself.sdk.models.Account
@@ -628,8 +629,15 @@ fun SelfDemoApp(
         Log.d(TAG, "credential request state: ${appState.requestState}")
         when (appState.requestState) {
             is ServerRequestState.RequestReceived -> {
-                if (navController.currentDestination?.route?.contains(MainRoute.ServerConnectionReady.toString(), ignoreCase = true) == true) {
-
+                val subjects = (appState.requestState as ServerRequestState.RequestReceived).subjects
+                val types = (appState.requestState as ServerRequestState.RequestReceived).types
+                if (navController.currentDestination?.route?.contains(MainRoute.ServerConnectionReady::class.simpleName.toString()) == true) {
+                    if (types.contains(CredentialType.Liveness)) {
+                        navController.navigate(MainRoute.AuthRequestStart)
+                    } else if (types.contains(CredentialType.Passport)) {
+                        credentialType = CredentialType.Document
+                        navController.navigate(MainRoute.ShareCredentialApproval)
+                    }
                 }
             }
             else -> {}
