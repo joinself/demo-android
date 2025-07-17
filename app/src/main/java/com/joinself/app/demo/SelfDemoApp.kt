@@ -47,6 +47,7 @@ import com.joinself.app.demo.ui.screens.VerifyDocumentStartScreen
 import com.joinself.app.demo.ui.screens.VerifyEmailResultScreen
 import com.joinself.app.demo.ui.screens.VerifyEmailStartScreen
 import com.joinself.app.demo.ui.screens.VerifySelectionScreen
+import com.joinself.common.Constants
 import com.joinself.common.CredentialType
 import com.joinself.common.exception.InvalidCredentialException
 import com.joinself.sdk.models.Account
@@ -359,7 +360,7 @@ fun SelfDemoApp(
             LaunchedEffect(appState.requestState) {
                 Log.d(TAG, "custom credential state: ${appState.requestState}")
                 when (appState.requestState) {
-                    ServerRequestState.RequestReceived -> {
+                    is ServerRequestState.RequestReceived -> {
                         withContext(Dispatchers.Main){
                             navController.navigate(MainRoute.GetCustomCredentialResult)
                         }
@@ -395,12 +396,15 @@ fun SelfDemoApp(
                 onProvideCustomCredential = {
                     credentialType = CredentialType.Custom
                     navController.navigate(MainRoute.ShareCredentialApproval)
-
                 },
                 onBack = {
 
                 }
             )
+            LaunchedEffect(Unit) {
+                delay(500)
+                viewModel.resetState(ServerRequestState.None)
+            }
         }
         composable<MainRoute.ShareCredentialApproval> {
             ShareCredentialApprovalScreen(
@@ -623,5 +627,23 @@ fun SelfDemoApp(
 
     LaunchedEffect(Unit) {
         Log.d(TAG, "Version: ${BuildConfig.VERSION_NAME}")
+    }
+    LaunchedEffect(appState.requestState) {
+        Log.d(TAG, "credential request state: ${appState.requestState}")
+        when (appState.requestState) {
+            is ServerRequestState.RequestReceived -> {
+                val subjects = (appState.requestState as ServerRequestState.RequestReceived).subjects
+                val types = (appState.requestState as ServerRequestState.RequestReceived).types
+                if (navController.currentDestination?.route?.contains(MainRoute.ServerConnectionReady::class.simpleName.toString()) == true) {
+                    if (types.contains(CredentialType.Liveness)) {
+                        navController.navigate(MainRoute.AuthRequestStart)
+                    } else if (types.contains(CredentialType.Passport)) {
+                        credentialType = CredentialType.Document
+                        navController.navigate(MainRoute.ShareCredentialApproval)
+                    }
+                }
+            }
+            else -> {}
+        }
     }
 }

@@ -119,7 +119,7 @@ fun AuthRequestStartScreen(
         ) {
             PrimaryButton(
                 title = "Start",
-                isDisabled = requestState != ServerRequestState.RequestReceived,
+                isDisabled = requestState !is ServerRequestState.RequestReceived,
                 onClick = onStartAuthentication
             )
         }
@@ -139,7 +139,7 @@ fun AuthRequestStartScreenWaitingPreview() {
 @Composable
 fun AuthRequestStartScreenReadyPreview() {
     AuthRequestStartScreen(
-        requestState = ServerRequestState.RequestReceived,
+        requestState = ServerRequestState.RequestReceived(),
         onStartAuthentication = {}
     )
 }

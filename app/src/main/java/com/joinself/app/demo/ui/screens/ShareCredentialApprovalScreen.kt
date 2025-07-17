@@ -25,15 +25,16 @@ fun ShareCredentialApprovalScreen(
     onDeny: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val subject = (requestState as? ServerRequestState.RequestReceived)?.subjects ?: listOf()
     val (title, description, icon) = when (credentialType) {
         CredentialType.Email -> Triple(
-            "Share Email?",
+            "Share Email Credentials?",
             "The server is requesting your verified email address.",
             Icons.Filled.Security
         )
         CredentialType.Document -> Triple(
-            "Share ID Number?",
-            "The server is requesting your verified identity document number.",
+            "Share Document Credentials?",
+            "The server is requesting your verified identity ${subject.joinToString(", ").ifEmpty { "document number" }}.",
             Icons.Filled.Security
         )
         else -> Triple(
@@ -128,13 +129,13 @@ fun ShareCredentialApprovalScreen(
         ) {
             PrimaryButton(
                 title = "Approve",
-                isDisabled = requestState != ServerRequestState.RequestReceived,
+                isDisabled = requestState !is ServerRequestState.RequestReceived,
                 onClick = onApprove
             )
             
             SecondaryButton(
                 title = "Reject",
-                isDisabled = requestState != ServerRequestState.RequestReceived,
+                isDisabled = requestState !is ServerRequestState.RequestReceived,
                 onClick = onDeny
             )
         }
@@ -146,7 +147,7 @@ fun ShareCredentialApprovalScreen(
 fun ShareEmailCredentialApprovalScreenReadyPreview() {
     ShareCredentialApprovalScreen(
         credentialType = CredentialType.Email,
-        requestState = ServerRequestState.RequestReceived,
+        requestState = ServerRequestState.RequestReceived(),
         onApprove = {},
         onDeny = {}
     )
@@ -157,7 +158,7 @@ fun ShareEmailCredentialApprovalScreenReadyPreview() {
 fun ShareDocumentCredentialApprovalScreenReadyPreview() {
     ShareCredentialApprovalScreen(
         credentialType = CredentialType.Document,
-        requestState = ServerRequestState.RequestReceived,
+        requestState = ServerRequestState.RequestReceived(subjects = listOf("dateOfBirth")),
         onApprove = {},
         onDeny = {}
     )
