@@ -34,7 +34,7 @@ fun ShareCredentialApprovalScreen(
         )
         CredentialType.Document -> Triple(
             "Share Document Credentials?",
-            "The server is requesting your verified identity ${subject.joinToString(", ")}.",
+            "The server is requesting your verified identity ${subject.joinToString(", ").ifEmpty { "document number" }}.",
             Icons.Filled.Security
         )
         else -> Triple(

@@ -396,12 +396,15 @@ fun SelfDemoApp(
                 onProvideCustomCredential = {
                     credentialType = CredentialType.Custom
                     navController.navigate(MainRoute.ShareCredentialApproval)
-
                 },
                 onBack = {
 
                 }
             )
+            LaunchedEffect(Unit) {
+                delay(500)
+                viewModel.resetState(ServerRequestState.None)
+            }
         }
         composable<MainRoute.ShareCredentialApproval> {
             ShareCredentialApprovalScreen(
