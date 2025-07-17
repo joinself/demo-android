@@ -128,13 +128,13 @@ fun ShareCredentialApprovalScreen(
         ) {
             PrimaryButton(
                 title = "Approve",
-                isDisabled = requestState != ServerRequestState.RequestReceived,
+                isDisabled = requestState !is ServerRequestState.RequestReceived,
                 onClick = onApprove
             )
             
             SecondaryButton(
                 title = "Reject",
-                isDisabled = requestState != ServerRequestState.RequestReceived,
+                isDisabled = requestState !is ServerRequestState.RequestReceived,
                 onClick = onDeny
             )
         }
@@ -146,7 +146,7 @@ fun ShareCredentialApprovalScreen(
 fun ShareEmailCredentialApprovalScreenReadyPreview() {
     ShareCredentialApprovalScreen(
         credentialType = CredentialType.Email,
-        requestState = ServerRequestState.RequestReceived,
+        requestState = ServerRequestState.RequestReceived(),
         onApprove = {},
         onDeny = {}
     )
@@ -157,7 +157,7 @@ fun ShareEmailCredentialApprovalScreenReadyPreview() {
 fun ShareDocumentCredentialApprovalScreenReadyPreview() {
     ShareCredentialApprovalScreen(
         credentialType = CredentialType.Document,
-        requestState = ServerRequestState.RequestReceived,
+        requestState = ServerRequestState.RequestReceived(),
         onApprove = {},
         onDeny = {}
     )

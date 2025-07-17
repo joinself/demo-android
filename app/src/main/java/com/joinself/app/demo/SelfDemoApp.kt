@@ -359,7 +359,7 @@ fun SelfDemoApp(
             LaunchedEffect(appState.requestState) {
                 Log.d(TAG, "custom credential state: ${appState.requestState}")
                 when (appState.requestState) {
-                    ServerRequestState.RequestReceived -> {
+                    is ServerRequestState.RequestReceived -> {
                         withContext(Dispatchers.Main){
                             navController.navigate(MainRoute.GetCustomCredentialResult)
                         }
@@ -623,5 +623,16 @@ fun SelfDemoApp(
 
     LaunchedEffect(Unit) {
         Log.d(TAG, "Version: ${BuildConfig.VERSION_NAME}")
+    }
+    LaunchedEffect(appState.requestState) {
+        Log.d(TAG, "credential request state: ${appState.requestState}")
+        when (appState.requestState) {
+            is ServerRequestState.RequestReceived -> {
+                if (navController.currentDestination?.route?.contains(MainRoute.ServerConnectionReady.toString(), ignoreCase = true) == true) {
+
+                }
+            }
+            else -> {}
+        }
     }
 }

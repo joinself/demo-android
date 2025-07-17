@@ -41,7 +41,7 @@ fun DocSignStartScreen(
                 HeroSection(
                     icon = Icons.Filled.PictureAsPdf,
                     title = "Document Signing",
-                    subtitle = if(requestState != ServerRequestState.RequestReceived) { "Waiting for a request from server..."} else {"The server has requested you sign a document. Review the details below and choose whether to sign or reject."}
+                    subtitle = if(requestState !is ServerRequestState.RequestReceived) { "Waiting for a request from server..."} else {"The server has requested you sign a document. Review the details below and choose whether to sign or reject."}
                 )
             }
 
@@ -90,13 +90,13 @@ fun DocSignStartScreen(
         ) {
             PrimaryButton(
                 title = "Approve",
-                isDisabled = requestState != ServerRequestState.RequestReceived,
+                isDisabled = requestState !is ServerRequestState.RequestReceived,
                 onClick = onSign
             )
             
             SecondaryButton(
                 title = "Reject",
-                isDisabled = requestState != ServerRequestState.RequestReceived,
+                isDisabled = requestState !is ServerRequestState.RequestReceived,
                 onClick = onReject
             )
         }
@@ -107,7 +107,7 @@ fun DocSignStartScreen(
 @Composable
 fun DocSignStartScreenReadyPreview() {
     DocSignStartScreen(
-        requestState = ServerRequestState.RequestReceived,
+        requestState = ServerRequestState.RequestReceived(),
         onSign = {},
         onReject = {}
     )

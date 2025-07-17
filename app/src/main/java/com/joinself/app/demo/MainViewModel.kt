@@ -45,7 +45,7 @@ sealed class ServerState {
 sealed class ServerRequestState {
     data object None: ServerRequestState()
     data object RequestSent: ServerRequestState()
-    data object RequestReceived: ServerRequestState()
+    data class RequestReceived(val subjects: List<String> = listOf()): ServerRequestState()
     data class  RequestError(val message: String): ServerRequestState()
     data class  ResponseSent(val status: ResponseStatus): ServerRequestState()
 }
@@ -133,7 +133,7 @@ class MainViewModel(context: Context): ViewModel() {
                     receivedCredentials.clear()
                     receivedCredentials.addAll(msg.credentials())
 
-                    _appUiState.update { it.copy(requestState = ServerRequestState.RequestReceived) }
+                    _appUiState.update { it.copy(requestState = ServerRequestState.RequestReceived()) }
 
                     cancelRequestTimeout()
                 }
@@ -143,14 +143,14 @@ class MainViewModel(context: Context): ViewModel() {
             when (msg) {
                 is CredentialRequest -> {
                     credentialRequest = msg
-                    _appUiState.update { it.copy(requestState = ServerRequestState.RequestReceived) }
+                    _appUiState.update { it.copy(requestState = ServerRequestState.RequestReceived()) }
                 }
                 is VerificationRequest -> {
                     // check the request is agreement, this example will respond automatically to the request
                     // users need to handle msg.proofs() which contains agreement content, to display to user
                     if (msg.types().contains(CredentialType.Agreement)) {
                         verificationRequest = msg
-                        _appUiState.update { it.copy(requestState = ServerRequestState.RequestReceived) }
+                        _appUiState.update { it.copy(requestState = ServerRequestState.RequestReceived()) }
                     }
                 }
             }
