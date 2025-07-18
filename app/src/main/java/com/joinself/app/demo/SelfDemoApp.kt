@@ -74,7 +74,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 
 
-private const val TAG = "SelfDemoApp"
+private const val TAG = "SelfSDKDemoApp"
 
 sealed class MainRoute {
     @Serializable object Initializing
@@ -203,7 +203,9 @@ fun SelfDemoApp(
             RegistrationIntroScreen( selfModifier = selfModifier,
                 onStartRegistration = {
                     viewModel.account.openRegistrationFlow { isSuccess, error ->
-                        if (isSuccess) navController.navigate(MainRoute.ConnectToServerSelection)
+                        coroutineScope.launch(Dispatchers.Main) {
+                            if (isSuccess) navController.navigate(MainRoute.ConnectToServerSelection)
+                        }
                     }
                 },
                 onStartRestore = {
@@ -305,23 +307,6 @@ fun SelfDemoApp(
 
                 }
             )
-
-            LaunchedEffect(appState.requestState) {
-                Log.d(TAG, "auth request state: ${appState.requestState}")
-                when (appState.requestState) {
-                    is ServerRequestState.None -> {
-                        withContext(Dispatchers.IO){
-                            viewModel.notifyServerForRequest(SERVER_REQUESTS.REQUEST_CREDENTIAL_AUTH)
-                        }
-                    }
-                    is ServerRequestState.ResponseSent -> {
-                        withContext(Dispatchers.Main){
-                            navController.navigate(MainRoute.AuthResultResult)
-                        }
-                    }
-                    else -> {}
-                }
-            }
             if (appState.requestState is ServerRequestState.RequestReceived) {
                 val request = (appState.requestState as ServerRequestState.RequestReceived).request
                 Dialog(
@@ -341,21 +326,28 @@ fun SelfDemoApp(
                             is CredentialRequest -> {
                                 viewModel.account.DisplayCredentialRequestUI(selfModifier, request, onFinish = { isSent, status ->
                                     viewModel.resetState(requestState = if (isSent) ServerRequestState.ResponseSent(status) else ServerRequestState.RequestError("failed to respond"))
-                                    coroutineScope.launch(Dispatchers.Main) {
-                                        navController.navigate(MainRoute.AuthResultResult)
-                                    }
-                                })
-                            }
-                            is VerificationRequest -> {
-                                viewModel.account.DisplayVerificationRequestUI(selfModifier, request, onFinish = {
-
                                 })
                             }
                         }
                     }
                 }
             }
-
+            LaunchedEffect(appState.requestState) {
+                Log.d(TAG, "auth request state: ${appState.requestState}")
+                when (appState.requestState) {
+                    is ServerRequestState.None -> {
+                        withContext(Dispatchers.IO){
+                            viewModel.notifyServerForRequest(SERVER_REQUESTS.REQUEST_CREDENTIAL_AUTH)
+                        }
+                    }
+                    is ServerRequestState.ResponseSent -> {
+                        withContext(Dispatchers.Main){
+                            navController.navigate(MainRoute.AuthResultResult)
+                        }
+                    }
+                    else -> {}
+                }
+            }
         }
         composable<MainRoute.AuthResultResult> {
             AuthRequestResultScreen(
@@ -385,7 +377,6 @@ fun SelfDemoApp(
         composable<MainRoute.VerifyEmailStart> {
             VerifyEmailStartScreen(
                 onStartVerification = {
-//                    navController.navigate(MainRoute.EmailRoute)
                     viewModel.account.openEmailVerificationFlow(onFinish = { isSuccess, error ->
                         navController.navigate(MainRoute.VerifyEmailResult)
                     })
@@ -403,7 +394,6 @@ fun SelfDemoApp(
         composable<MainRoute.VerifyDocumentStart> {
             VerifyDocumentStartScreen(
                 onStartVerification = {
-//                    navController.navigate(MainRoute.DocumentRoute)
                     viewModel.account.openDocumentVerificationFlow(isDevMode = false,
                         onFinish = { isSuccess, error ->
                             navController.navigate(MainRoute.VerifyDocumentResult)
@@ -488,6 +478,31 @@ fun SelfDemoApp(
 //                    viewModel.shareCredential(status = ResponseStatus.rejected)
                 }
             )
+            if (appState.requestState is ServerRequestState.RequestReceived) {
+                val request = (appState.requestState as ServerRequestState.RequestReceived).request
+                Dialog(
+                    onDismissRequest = { },
+                    properties = DialogProperties(
+                        dismissOnBackPress = false,
+                        dismissOnClickOutside = false,
+                        usePlatformDefaultWidth = false
+                    ),
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        when(request) {
+                            is CredentialRequest -> {
+                                viewModel.account.DisplayCredentialRequestUI(selfModifier, request, onFinish = { isSent, status ->
+                                    viewModel.resetState(requestState = if (isSent) ServerRequestState.ResponseSent(status) else ServerRequestState.RequestError("failed to respond"))
+                                })
+                            }
+                        }
+                    }
+                }
+            }
             LaunchedEffect(appState.requestState) {
                 Log.d(TAG, "credential request state: ${appState.requestState}")
                 when (appState.requestState) {
@@ -504,14 +519,6 @@ fun SelfDemoApp(
                         }
                     }
                     else -> {}
-                }
-            }
-            DisposableEffect(true) {
-                onDispose {
-                    Log.d(TAG, "disposable request state: ${appState.requestState}")
-                    if (appState.requestState !is ServerRequestState.ResponseSent) {
-                        viewModel.resetState(ServerRequestState.None)
-                    }
                 }
             }
         }
@@ -534,6 +541,26 @@ fun SelfDemoApp(
 //                    viewModel.sendDocSignResponse(status = ResponseStatus.rejected)
                 }
             )
+            if (appState.requestState is ServerRequestState.RequestReceived) {
+                val request = (appState.requestState as ServerRequestState.RequestReceived).request
+                Dialog(
+                    onDismissRequest = { },
+                    properties = DialogProperties(dismissOnBackPress = false, dismissOnClickOutside = false, usePlatformDefaultWidth = false),
+                ) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        when(request) {
+                            is VerificationRequest -> {
+                                viewModel.account.DisplayVerificationRequestUI(selfModifier, request, onFinish = { isSent, status ->
+                                    viewModel.resetState(requestState = if (isSent) ServerRequestState.ResponseSent(status) else ServerRequestState.RequestError("failed to respond"))
+                                })
+                            }
+                        }
+                    }
+                }
+            }
             LaunchedEffect(appState.requestState) {
                 Log.d(TAG, "docsign request state: ${appState.requestState}")
                 when (appState.requestState) {
@@ -568,9 +595,9 @@ fun SelfDemoApp(
                 onStartBackup = {
                     coroutineScope.launch(Dispatchers.IO) {
 //                        backupByteArray = viewModel.backup()
-                        withContext(Dispatchers.Main) {
-                            navController.navigate(MainRoute.BackupResult)
-                        }
+//                        withContext(Dispatchers.Main) {
+//                            navController.navigate(MainRoute.BackupResult)
+//                        }
                     }
                 }
             )
@@ -705,12 +732,7 @@ fun SelfDemoApp(
             is ServerRequestState.RequestReceived -> {
                 val request = (appState.requestState as ServerRequestState.RequestReceived).request
                 if (request is CredentialRequest && navController.currentDestination?.route?.contains(MainRoute.ServerConnectionReady::class.simpleName.toString()) == true) {
-                    if (request.types().contains(CredentialType.Liveness)) {
-                        navController.navigate(MainRoute.AuthRequestStart)
-                    } else if (request.types().contains(CredentialType.Passport)) {
-                        credentialType = CredentialType.Document
-                        navController.navigate(MainRoute.ShareCredentialApproval)
-                    }
+                    navController.navigate(MainRoute.ShareCredentialApproval)
                 }
             }
             else -> {}
