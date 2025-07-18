@@ -47,15 +47,14 @@ import com.joinself.app.demo.ui.screens.VerifyDocumentStartScreen
 import com.joinself.app.demo.ui.screens.VerifyEmailResultScreen
 import com.joinself.app.demo.ui.screens.VerifyEmailStartScreen
 import com.joinself.app.demo.ui.screens.VerifySelectionScreen
-import com.joinself.common.Constants
 import com.joinself.common.CredentialType
-import com.joinself.common.exception.InvalidCredentialException
-import com.joinself.sdk.models.Account
+import com.joinself.sdk.SelfSDK
 import com.joinself.sdk.models.ResponseStatus
-import com.joinself.sdk.ui.adQRCodeRoute
-import com.joinself.sdk.ui.addDocumentVerificationRoute
-import com.joinself.sdk.ui.addEmailRoute
-import com.joinself.sdk.ui.addLivenessCheckRoute
+import com.joinself.sdk.ui.integrateUIFlows
+import com.joinself.sdk.ui.openDocumentVerificationFlow
+import com.joinself.sdk.ui.openEmailVerificationFlow
+import com.joinself.sdk.ui.openQRCodeFlow
+import com.joinself.sdk.ui.openRegistrationFlow
 import com.joinself.sdk.utils.popAllBackStacks
 import com.joinself.ui.component.LoadingDialog
 import com.joinself.ui.theme.SelfModifier
@@ -64,7 +63,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
-import kotlin.collections.isNotEmpty
 
 
 private const val TAG = "SelfDemoApp"
@@ -98,10 +96,10 @@ sealed class MainRoute {
     @Serializable object RestoreResult
 
     companion object {
-        val LivenessRoute = "livenessRoute"
-        val EmailRoute = "emailRoute"
-        val DocumentRoute = "documentRoute"
-        val QRCodeRoute = "qrCodeRoute"
+//        val LivenessRoute = "livenessRoute"
+//        val EmailRoute = "emailRoute"
+//        val DocumentRoute = "documentRoute"
+//        val QRCodeRoute = "qrCodeRoute"
     }
 }
 
@@ -147,7 +145,7 @@ fun SelfDemoApp(
             if (backupBytes != null && backupBytes.isNotEmpty() && selfieByteArray.isNotEmpty()) {
                 coroutineScope.launch(Dispatchers.IO) {
                     try {
-                        viewModel.restore(backupBytes, selfieByteArray)
+//                        viewModel.restore(backupBytes, selfieByteArray)
                     } catch (ex: Exception) {
                         Log.e("SelfSDK", "restore error", ex)
                         withContext(Dispatchers.Main) {
@@ -169,7 +167,7 @@ fun SelfDemoApp(
         enterTransition = { EnterTransition.None },
         exitTransition = { ExitTransition.None }
     ) {
-
+        SelfSDK.integrateUIFlows(this, navController, selfModifier = selfModifier)
         composable<MainRoute.Initializing> {
             InitializeSDKScreen(
                 initialization = appState.initialization,
@@ -195,7 +193,9 @@ fun SelfDemoApp(
         composable<MainRoute.Registration> {
             RegistrationIntroScreen( selfModifier = selfModifier,
                 onStartRegistration = {
-                    navController.navigate(MainRoute.LivenessRoute)
+                    viewModel.account.openRegistrationFlow { isSuccess, error ->
+                        if (isSuccess) navController.navigate(MainRoute.ConnectToServerSelection)
+                    }
                 },
                 onStartRestore = {
                     navController.navigate(MainRoute.RestoreStart)
@@ -209,7 +209,27 @@ fun SelfDemoApp(
                     navController.navigate(MainRoute.ConnectToServerAddress)
                 },
                 onQRCode = {
-                    navController.navigate(MainRoute.QRCodeRoute)
+                    viewModel.account.openQRCodeFlow(
+                        onFinish = { qrCode, discoveryData ->
+                            if (discoveryData == null || !discoveryData.sandbox) {
+                                return@openQRCodeFlow
+                            }
+
+                            coroutineScope.launch(Dispatchers.IO) {
+                                // then connect with the connection in the qrcode
+                                viewModel.connect(inboxAddress = discoveryData.address, qrCode = qrCode)
+
+                                withContext(Dispatchers.Main) {
+                                    if (appState.serverState is ServerState.Success) {
+                                        navController.navigate(MainRoute.ServerConnectionReady)
+                                    }
+                                }
+                            }
+                        },
+                        onExit = {
+                            navController.popBackStack()
+                        }
+                    )
                 }
             )
         }
@@ -273,7 +293,7 @@ fun SelfDemoApp(
             AuthRequestStartScreen(
                 requestState = appState.requestState,
                 onStartAuthentication = {
-                    navController.navigate(MainRoute.LivenessRoute)
+//                    navController.navigate(MainRoute.LivenessRoute)
                 }
             )
 
@@ -322,7 +342,10 @@ fun SelfDemoApp(
         composable<MainRoute.VerifyEmailStart> {
             VerifyEmailStartScreen(
                 onStartVerification = {
-                    navController.navigate(MainRoute.EmailRoute)
+//                    navController.navigate(MainRoute.EmailRoute)
+                    viewModel.account.openEmailVerificationFlow(onFinish = { isSuccess, error ->
+                        navController.navigate(MainRoute.VerifyEmailResult)
+                    })
                 }
             )
         }
@@ -337,7 +360,12 @@ fun SelfDemoApp(
         composable<MainRoute.VerifyDocumentStart> {
             VerifyDocumentStartScreen(
                 onStartVerification = {
-                    navController.navigate(MainRoute.DocumentRoute)
+//                    navController.navigate(MainRoute.DocumentRoute)
+                    viewModel.account.openDocumentVerificationFlow(isDevMode = false,
+                        onFinish = { isSuccess, error ->
+                            navController.navigate(MainRoute.VerifyDocumentResult)
+                        }
+                    )
                 }
             )
         }
@@ -375,7 +403,7 @@ fun SelfDemoApp(
                 credentialName = "Custom Credentials",
                 onContinue = {
                     navController.popBackStack(MainRoute.ServerConnectionReady, inclusive = false)
-                    viewModel.storeCredentials()
+//                    viewModel.storeCredentials()
                 },
                 onRetry = {
                     navController.popBackStack()
@@ -411,10 +439,10 @@ fun SelfDemoApp(
                 credentialType = credentialType,
                 requestState = appState.requestState,
                 onApprove = {
-                    viewModel.shareCredential(status = ResponseStatus.accepted)
+//                    viewModel.shareCredential(status = ResponseStatus.accepted)
                 },
                 onDeny = {
-                    viewModel.shareCredential(status = ResponseStatus.rejected)
+//                    viewModel.shareCredential(status = ResponseStatus.rejected)
                 }
             )
             LaunchedEffect(appState.requestState) {
@@ -457,10 +485,10 @@ fun SelfDemoApp(
             DocSignStartScreen(
                 requestState = appState.requestState,
                 onSign = {
-                    viewModel.sendDocSignResponse(status = ResponseStatus.accepted)
+//                    viewModel.sendDocSignResponse(status = ResponseStatus.accepted)
                 },
                 onReject = {
-                    viewModel.sendDocSignResponse(status = ResponseStatus.rejected)
+//                    viewModel.sendDocSignResponse(status = ResponseStatus.rejected)
                 }
             )
             LaunchedEffect(appState.requestState) {
@@ -496,7 +524,7 @@ fun SelfDemoApp(
                 backupState = appState.backupRestoreState,
                 onStartBackup = {
                     coroutineScope.launch(Dispatchers.IO) {
-                        backupByteArray = viewModel.backup()
+//                        backupByteArray = viewModel.backup()
                         withContext(Dispatchers.Main) {
                             navController.navigate(MainRoute.BackupResult)
                         }
@@ -519,7 +547,7 @@ fun SelfDemoApp(
                 restoreState = appState.backupRestoreState,
                 onStartRestore = {
                     isRestoreFlow = true
-                    navController.navigate(MainRoute.LivenessRoute)
+//                    navController.navigate(MainRoute.LivenessRoute)
                 }
             )
             if (appState.backupRestoreState is BackupRestoreState.Processing) {
@@ -541,88 +569,88 @@ fun SelfDemoApp(
         }
 
         // add liveness check to main navigation
-        addLivenessCheckRoute(navController, route = MainRoute.LivenessRoute, selfModifier = selfModifier,
-            account = { viewModel.account },
-            withCredential = true,
-            onFinish = { selfie, credentials ->
-                if (isRestoreFlow) {
-                    selfieByteArray = selfie
-                    pickerLauncher.launch("application/octet-stream")
-                } else if (!viewModel.isRegistered()) {
-                    coroutineScope.launch(Dispatchers.IO) {
-                        try {
-                            if (selfie.isNotEmpty() && credentials.isNotEmpty()) {
-                                val success = viewModel.register(selfie = selfie, credentials = credentials)
-                                if (success) {
-                                    coroutineScope.launch(Dispatchers.Main) {
-                                        navController.popBackStack()
-                                        navController.navigate(MainRoute.ConnectToServerSelection)
-                                    }
-                                }
-                            }
-                        } catch (_: InvalidCredentialException) { }
-                    }
-                } else {
-                    viewModel.sendCredentialResponse(credentials, status = ResponseStatus.accepted)
-                }
-                // nav back to main
-                coroutineScope.launch(Dispatchers.Main) {
-                    navController.popBackStack(MainRoute.LivenessRoute, true)
-                }
-            }
-        )
+//        addLivenessCheckRoute(navController, route = MainRoute.LivenessRoute, selfModifier = selfModifier,
+//            account = { viewModel.account },
+//            withCredential = true,
+//            onFinish = { selfie, credentials ->
+//                if (isRestoreFlow) {
+//                    selfieByteArray = selfie
+//                    pickerLauncher.launch("application/octet-stream")
+//                } else if (!viewModel.isRegistered()) {
+//                    coroutineScope.launch(Dispatchers.IO) {
+//                        try {
+//                            if (selfie.isNotEmpty() && credentials.isNotEmpty()) {
+//                                val success = viewModel.register(selfie = selfie, credentials = credentials)
+//                                if (success) {
+//                                    coroutineScope.launch(Dispatchers.Main) {
+//                                        navController.popBackStack()
+//                                        navController.navigate(MainRoute.ConnectToServerSelection)
+//                                    }
+//                                }
+//                            }
+//                        } catch (_: InvalidCredentialException) { }
+//                    }
+//                } else {
+//                    viewModel.sendCredentialResponse(credentials, status = ResponseStatus.accepted)
+//                }
+//                // nav back to main
+//                coroutineScope.launch(Dispatchers.Main) {
+//                    navController.popBackStack(MainRoute.LivenessRoute, true)
+//                }
+//            }
+//        )
 
-        // add email flow into main navigation
-        addEmailRoute(navController, route = MainRoute.EmailRoute, selfModifier = selfModifier,
-            account = { viewModel.account },
-            onFinish = { isSuccess, error ->
-                if (isSuccess) {
-                    coroutineScope.launch(Dispatchers.Main) {
-                        navController.navigate(MainRoute.VerifyEmailResult)
-                    }
-                }
-            }
-        )
+//        // add email flow into main navigation
+//        addEmailRoute(navController, route = MainRoute.EmailRoute, selfModifier = selfModifier,
+//            account = { viewModel.account },
+//            onFinish = { isSuccess, error ->
+//                if (isSuccess) {
+//                    coroutineScope.launch(Dispatchers.Main) {
+//                        navController.navigate(MainRoute.VerifyEmailResult)
+//                    }
+//                }
+//            }
+//        )
 
         // integrate passport, idcard verification flow
-        addDocumentVerificationRoute(navController, route = MainRoute.DocumentRoute, selfModifier = selfModifier,account = { viewModel.account },
-            isDevMode = { false }, // true for testing only
-            onFinish = { isSuccess, error ->
-                if (isSuccess) {
-                    coroutineScope.launch(Dispatchers.Main) {
-                        navController.navigate(MainRoute.VerifyDocumentResult)
-                    }
-                }
-            }
-        )
+//        addDocumentVerificationRoute(navController, route = MainRoute.DocumentRoute, selfModifier = selfModifier,account = { viewModel.account },
+//            isDevMode = { false }, // true for testing only
+//            onFinish = { isSuccess, error ->
+//                if (isSuccess) {
+//                    coroutineScope.launch(Dispatchers.Main) {
+//                        navController.navigate(MainRoute.VerifyDocumentResult)
+//                    }
+//                }
+//            }
+//        )
 
         // integrate qr code flow
-        adQRCodeRoute(navController, MainRoute.QRCodeRoute, selfModifier = selfModifier,
-            onFinish = { qrCodeBytes, _ ->
-                coroutineScope.launch(Dispatchers.IO) {
-                    // parse qrcode first and check the correct environment
-                    val discoveryData = Account.qrCode(qrCodeBytes)
-                    if (discoveryData == null || !discoveryData.sandbox) {
-                        return@launch
-                    }
-
-                    // then connect with the connection in the qrcode
-                    viewModel.connect(inboxAddress = discoveryData.address, qrCode = qrCodeBytes)
-
-                    coroutineScope.launch(Dispatchers.Main) {
-                        navController.popBackStack(MainRoute.QRCodeRoute, true)
-                        if (appState.serverState is ServerState.Success) {
-                            navController.navigate(MainRoute.ServerConnectionReady)
-                        }
-                    }
-                }
-            },
-            onExit = {
-                coroutineScope.launch(Dispatchers.Main) {
-                    navController.popBackStack(MainRoute.QRCodeRoute, true)
-                }
-            }
-        )
+//        adQRCodeRoute(navController, MainRoute.QRCodeRoute, selfModifier = selfModifier,
+//            onFinish = { qrCodeBytes, _ ->
+//                coroutineScope.launch(Dispatchers.IO) {
+//                    // parse qrcode first and check the correct environment
+//                    val discoveryData = Account.qrCode(qrCodeBytes)
+//                    if (discoveryData == null || !discoveryData.sandbox) {
+//                        return@launch
+//                    }
+//
+//                    // then connect with the connection in the qrcode
+//                    viewModel.connect(inboxAddress = discoveryData.address, qrCode = qrCodeBytes)
+//
+//                    coroutineScope.launch(Dispatchers.Main) {
+//                        navController.popBackStack(MainRoute.QRCodeRoute, true)
+//                        if (appState.serverState is ServerState.Success) {
+//                            navController.navigate(MainRoute.ServerConnectionReady)
+//                        }
+//                    }
+//                }
+//            },
+//            onExit = {
+//                coroutineScope.launch(Dispatchers.Main) {
+//                    navController.popBackStack(MainRoute.QRCodeRoute, true)
+//                }
+//            }
+//        )
     }
 
     LaunchedEffect(Unit) {
