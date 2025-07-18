@@ -8,6 +8,8 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -17,8 +19,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -49,7 +54,11 @@ import com.joinself.app.demo.ui.screens.VerifyEmailStartScreen
 import com.joinself.app.demo.ui.screens.VerifySelectionScreen
 import com.joinself.common.CredentialType
 import com.joinself.sdk.SelfSDK
+import com.joinself.sdk.models.CredentialRequest
 import com.joinself.sdk.models.ResponseStatus
+import com.joinself.sdk.models.VerificationRequest
+import com.joinself.sdk.ui.DisplayCredentialRequestUI
+import com.joinself.sdk.ui.DisplayVerificationRequestUI
 import com.joinself.sdk.ui.integrateUIFlows
 import com.joinself.sdk.ui.openDocumentVerificationFlow
 import com.joinself.sdk.ui.openEmailVerificationFlow
@@ -293,7 +302,7 @@ fun SelfDemoApp(
             AuthRequestStartScreen(
                 requestState = appState.requestState,
                 onStartAuthentication = {
-//                    navController.navigate(MainRoute.LivenessRoute)
+
                 }
             )
 
@@ -313,6 +322,40 @@ fun SelfDemoApp(
                     else -> {}
                 }
             }
+            if (appState.requestState is ServerRequestState.RequestReceived) {
+                val request = (appState.requestState as ServerRequestState.RequestReceived).request
+                Dialog(
+                    onDismissRequest = { },
+                    properties = DialogProperties(
+                        dismissOnBackPress = false,
+                        dismissOnClickOutside = false,
+                        usePlatformDefaultWidth = false
+                    ),
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        when(request) {
+                            is CredentialRequest -> {
+                                viewModel.account.DisplayCredentialRequestUI(selfModifier, request, onFinish = { isSent, status ->
+                                    viewModel.resetState(requestState = if (isSent) ServerRequestState.ResponseSent(status) else ServerRequestState.RequestError("failed to respond"))
+                                    coroutineScope.launch(Dispatchers.Main) {
+                                        navController.navigate(MainRoute.AuthResultResult)
+                                    }
+                                })
+                            }
+                            is VerificationRequest -> {
+                                viewModel.account.DisplayVerificationRequestUI(selfModifier, request, onFinish = {
+
+                                })
+                            }
+                        }
+                    }
+                }
+            }
+
         }
         composable<MainRoute.AuthResultResult> {
             AuthRequestResultScreen(
@@ -660,12 +703,11 @@ fun SelfDemoApp(
         Log.d(TAG, "credential request state: ${appState.requestState}")
         when (appState.requestState) {
             is ServerRequestState.RequestReceived -> {
-                val subjects = (appState.requestState as ServerRequestState.RequestReceived).subjects
-                val types = (appState.requestState as ServerRequestState.RequestReceived).types
-                if (navController.currentDestination?.route?.contains(MainRoute.ServerConnectionReady::class.simpleName.toString()) == true) {
-                    if (types.contains(CredentialType.Liveness)) {
+                val request = (appState.requestState as ServerRequestState.RequestReceived).request
+                if (request is CredentialRequest && navController.currentDestination?.route?.contains(MainRoute.ServerConnectionReady::class.simpleName.toString()) == true) {
+                    if (request.types().contains(CredentialType.Liveness)) {
                         navController.navigate(MainRoute.AuthRequestStart)
-                    } else if (types.contains(CredentialType.Passport)) {
+                    } else if (request.types().contains(CredentialType.Passport)) {
                         credentialType = CredentialType.Document
                         navController.navigate(MainRoute.ShareCredentialApproval)
                     }

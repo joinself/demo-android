@@ -41,7 +41,7 @@ sealed class ServerState {
 sealed class ServerRequestState {
     data object None: ServerRequestState()
     data object RequestSent: ServerRequestState()
-    data class RequestReceived(val types: List<String> = listOf(), val subjects: List<String> = listOf()): ServerRequestState()
+    data class RequestReceived(val request: Any? = null): ServerRequestState()
     data class  RequestError(val message: String): ServerRequestState()
     data class  ResponseSent(val status: ResponseStatus): ServerRequestState()
 }
@@ -110,14 +110,14 @@ class MainViewModel(context: Context): ViewModel() {
                     when (message) {
                         is CredentialRequest -> {
                             credentialRequest = message
-                            _appUiState.update { it.copy(requestState = ServerRequestState.RequestReceived())}
+                            _appUiState.update { it.copy(requestState = ServerRequestState.RequestReceived(message))}
                         }
                         is VerificationRequest -> {
                             // check the request is agreement, this example will respond automatically to the request
                             // users need to handle msg.proofs() which contains agreement content, to display to user
                             if (message.types().contains(CredentialType.Agreement)) {
                                 verificationRequest = message
-                                _appUiState.update { it.copy(requestState = ServerRequestState.RequestReceived()) }
+                                _appUiState.update { it.copy(requestState = ServerRequestState.RequestReceived(message)) }
                             }
                         }
                     }
