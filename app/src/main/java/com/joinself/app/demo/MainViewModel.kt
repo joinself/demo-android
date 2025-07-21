@@ -9,6 +9,7 @@ import com.joinself.common.Environment
 import com.joinself.sdk.SelfSDK
 import com.joinself.sdk.models.Account
 import com.joinself.sdk.models.ChatMessage
+import com.joinself.sdk.models.CredentialMessage
 import com.joinself.sdk.models.CredentialRequest
 import com.joinself.sdk.models.Message
 import com.joinself.sdk.models.PublicKey
@@ -108,6 +109,9 @@ class MainViewModel(context: Context): ViewModel() {
                     Log.d("Self", "onMessage: ${message.id()}")
 
                     when (message) {
+                        is CredentialMessage -> {
+                            _appUiState.update { it.copy(requestState = ServerRequestState.RequestReceived(message))}
+                        }
                         is CredentialRequest -> {
                             credentialRequest = message
                             _appUiState.update { it.copy(requestState = ServerRequestState.RequestReceived(message))}

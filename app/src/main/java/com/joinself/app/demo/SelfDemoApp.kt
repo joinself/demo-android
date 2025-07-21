@@ -11,7 +11,6 @@ import androidx.compose.animation.ExitTransition
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -54,11 +53,10 @@ import com.joinself.app.demo.ui.screens.VerifyEmailStartScreen
 import com.joinself.app.demo.ui.screens.VerifySelectionScreen
 import com.joinself.common.CredentialType
 import com.joinself.sdk.SelfSDK
+import com.joinself.sdk.models.CredentialMessage
 import com.joinself.sdk.models.CredentialRequest
-import com.joinself.sdk.models.ResponseStatus
 import com.joinself.sdk.models.VerificationRequest
-import com.joinself.sdk.ui.DisplayCredentialRequestUI
-import com.joinself.sdk.ui.DisplayVerificationRequestUI
+import com.joinself.sdk.ui.DisplayRequestUI
 import com.joinself.sdk.ui.integrateUIFlows
 import com.joinself.sdk.ui.openDocumentVerificationFlow
 import com.joinself.sdk.ui.openEmailVerificationFlow
@@ -324,7 +322,7 @@ fun SelfDemoApp(
                     ) {
                         when(request) {
                             is CredentialRequest -> {
-                                viewModel.account.DisplayCredentialRequestUI(selfModifier, request, onFinish = { isSent, status ->
+                                viewModel.account.DisplayRequestUI(selfModifier, request, onFinish = { isSent, status ->
                                     viewModel.resetState(requestState = if (isSent) ServerRequestState.ResponseSent(status) else ServerRequestState.RequestError("failed to respond"))
                                 })
                             }
@@ -418,10 +416,30 @@ fun SelfDemoApp(
                     }
                 }
             )
+            if (appState.requestState is ServerRequestState.RequestReceived) {
+                val request = (appState.requestState as ServerRequestState.RequestReceived).request
+                Dialog(
+                    onDismissRequest = { },
+                    properties = DialogProperties(dismissOnBackPress = false, dismissOnClickOutside = false, usePlatformDefaultWidth = false),
+                ) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        when(request) {
+                            is CredentialMessage -> {
+                                viewModel.account.DisplayRequestUI(selfModifier, request, onFinish = { isSent, status ->
+                                    viewModel.resetState(requestState = if (isSent) ServerRequestState.ResponseSent(status) else ServerRequestState.RequestError("failed to respond"))
+                                })
+                            }
+                        }
+                    }
+                }
+            }
             LaunchedEffect(appState.requestState) {
                 Log.d(TAG, "custom credential state: ${appState.requestState}")
                 when (appState.requestState) {
-                    is ServerRequestState.RequestReceived -> {
+                    is ServerRequestState.ResponseSent -> {
                         withContext(Dispatchers.Main){
                             navController.navigate(MainRoute.GetCustomCredentialResult)
                         }
@@ -495,7 +513,7 @@ fun SelfDemoApp(
                     ) {
                         when(request) {
                             is CredentialRequest -> {
-                                viewModel.account.DisplayCredentialRequestUI(selfModifier, request, onFinish = { isSent, status ->
+                                viewModel.account.DisplayRequestUI(selfModifier, request, onFinish = { isSent, status ->
                                     viewModel.resetState(requestState = if (isSent) ServerRequestState.ResponseSent(status) else ServerRequestState.RequestError("failed to respond"))
                                 })
                             }
@@ -553,7 +571,7 @@ fun SelfDemoApp(
                     ) {
                         when(request) {
                             is VerificationRequest -> {
-                                viewModel.account.DisplayVerificationRequestUI(selfModifier, request, onFinish = { isSent, status ->
+                                viewModel.account.DisplayRequestUI(selfModifier, request, onFinish = { isSent, status ->
                                     viewModel.resetState(requestState = if (isSent) ServerRequestState.ResponseSent(status) else ServerRequestState.RequestError("failed to respond"))
                                 })
                             }

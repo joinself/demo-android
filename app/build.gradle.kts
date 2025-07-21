@@ -40,6 +40,7 @@ android {
             abiFilters.add("arm64-v8a")
         }
         setProperty("archivesBaseName", "self-demo-${versionName}")
+        missingDimensionStrategy("version", "public")
     }
     signingConfigs {
         create("release") {
