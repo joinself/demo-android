@@ -325,6 +325,7 @@ class MainViewModel(context: Context): ViewModel() {
             .setFromIdentifier(verificationRequest!!.fromIdentifier())
             .setStatus(status)
             .build()
+        verificationResponse.addProperties(verificationRequest!!.properties())
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 account.send(verificationResponse) { messageId, _ ->
