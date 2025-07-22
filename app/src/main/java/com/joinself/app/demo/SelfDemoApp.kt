@@ -51,7 +51,9 @@ import com.joinself.common.Constants
 import com.joinself.common.CredentialType
 import com.joinself.common.exception.InvalidCredentialException
 import com.joinself.sdk.models.Account
+import com.joinself.sdk.models.CredentialRequest
 import com.joinself.sdk.models.ResponseStatus
+import com.joinself.sdk.models.VerificationRequest
 import com.joinself.sdk.ui.adQRCodeRoute
 import com.joinself.sdk.ui.addDocumentVerificationRoute
 import com.joinself.sdk.ui.addEmailRoute
@@ -471,7 +473,7 @@ fun SelfDemoApp(
                             viewModel.notifyServerForRequest(SERVER_REQUESTS.REQUEST_DOCUMENT_SIGNING)
                         }
                     }
-                    is ServerRequestState.ResponseSent -> {
+                    is ServerRequestState.ResponseSent, is ServerRequestState.RequestError -> {
                         withContext(Dispatchers.Main){
                             navController.navigate(MainRoute.DocumentSignResult)
                         }
@@ -632,14 +634,23 @@ fun SelfDemoApp(
         Log.d(TAG, "credential request state: ${appState.requestState}")
         when (appState.requestState) {
             is ServerRequestState.RequestReceived -> {
-                val subjects = (appState.requestState as ServerRequestState.RequestReceived).subjects
-                val types = (appState.requestState as ServerRequestState.RequestReceived).types
                 if (navController.currentDestination?.route?.contains(MainRoute.ServerConnectionReady::class.simpleName.toString()) == true) {
-                    if (types.contains(CredentialType.Liveness)) {
-                        navController.navigate(MainRoute.AuthRequestStart)
-                    } else if (types.contains(CredentialType.Passport)) {
-                        credentialType = CredentialType.Document
-                        navController.navigate(MainRoute.ShareCredentialApproval)
+                    val request = (appState.requestState as ServerRequestState.RequestReceived).request
+                    when (request) {
+                        is CredentialRequest -> {
+                            val types = request.details().flatMap { d -> d.types() }
+                            val subjects = request.details().map { d -> d.subject() }
+                            if (types.contains(CredentialType.Liveness)) {
+                                navController.navigate(MainRoute.AuthRequestStart)
+                            } else if (types.contains(CredentialType.Passport)) {
+                                credentialType = CredentialType.Document
+                                navController.navigate(MainRoute.ShareCredentialApproval)
+                            }
+                        }
+
+                        is VerificationRequest -> {
+                            navController.navigate(MainRoute.DocumentSignStart)
+                        }
                     }
                 }
             }

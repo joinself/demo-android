@@ -15,6 +15,7 @@ import com.joinself.sdk.models.CredentialMessage
 import com.joinself.sdk.models.CredentialRequest
 import com.joinself.sdk.models.CredentialResponse
 import com.joinself.sdk.models.ResponseStatus
+import com.joinself.sdk.models.SigningRequest
 import com.joinself.sdk.models.VerificationRequest
 import com.joinself.sdk.models.VerificationResponse
 import kotlinx.coroutines.Job
@@ -45,7 +46,7 @@ sealed class ServerState {
 sealed class ServerRequestState {
     data object None: ServerRequestState()
     data object RequestSent: ServerRequestState()
-    data class RequestReceived(val types: List<String> = listOf(), val subjects: List<String> = listOf()): ServerRequestState()
+    data class RequestReceived(val request: Any? = null): ServerRequestState()
     data class  RequestError(val message: String): ServerRequestState()
     data class  ResponseSent(val status: ResponseStatus): ServerRequestState()
 }
@@ -87,6 +88,7 @@ class MainViewModel(context: Context): ViewModel() {
     private var groupAddress: String = ""
     private var credentialRequest: CredentialRequest? = null
     private var verificationRequest: VerificationRequest? = null
+    private var signingRequest: SigningRequest? = null
     private var requestTimeoutJob: Job? = null
     private val receivedCredentials = mutableListOf<Credential>()
 
@@ -143,15 +145,21 @@ class MainViewModel(context: Context): ViewModel() {
             when (msg) {
                 is CredentialRequest -> {
                     credentialRequest = msg
-                    _appUiState.update { it.copy(requestState = ServerRequestState.RequestReceived(types = msg.details().flatMap { d -> d.types() }, subjects = msg.details().map { d -> d.subject() })) }
+                    _appUiState.update { it.copy(requestState = ServerRequestState.RequestReceived(msg))}
                 }
                 is VerificationRequest -> {
                     // check the request is agreement, this example will respond automatically to the request
                     // users need to handle msg.proofs() which contains agreement content, to display to user
                     if (msg.types().contains(CredentialType.Agreement)) {
                         verificationRequest = msg
-                        _appUiState.update { it.copy(requestState = ServerRequestState.RequestReceived()) }
+                        _appUiState.update { it.copy(requestState = ServerRequestState.RequestReceived(msg)) }
+
                     }
+                }
+                is SigningRequest -> {
+                    signingRequest = msg
+                    _appUiState.update { it.copy(requestState = ServerRequestState.RequestReceived(msg)) }
+
                 }
             }
 
@@ -318,8 +326,12 @@ class MainViewModel(context: Context): ViewModel() {
             .setStatus(status)
             .build()
         viewModelScope.launch(Dispatchers.IO) {
-            account.send(verificationResponse) { messageId, _ ->
-                _appUiState.update { it.copy(requestState = ServerRequestState.ResponseSent(status)) }
+            try {
+                account.send(verificationResponse) { messageId, _ ->
+                    _appUiState.update { it.copy(requestState = ServerRequestState.ResponseSent(status)) }
+                }
+            } catch (ex: Exception) {
+                _appUiState.update { it.copy(requestState = ServerRequestState.RequestError(ex.message ?: "failed to send response")) }
             }
         }
     }
