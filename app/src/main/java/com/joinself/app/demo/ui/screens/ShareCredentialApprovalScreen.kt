@@ -25,7 +25,6 @@ fun ShareCredentialApprovalScreen(
     onDeny: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val subject = (requestState as? ServerRequestState.RequestReceived)?.subjects ?: listOf()
     val (title, description, icon) = when (credentialType) {
         CredentialType.Email -> Triple(
             "Share Email Credentials?",
@@ -34,7 +33,7 @@ fun ShareCredentialApprovalScreen(
         )
         CredentialType.Document -> Triple(
             "Share Document Credentials?",
-            "The server is requesting your verified identity ${subject.joinToString(", ").ifEmpty { "document number" }}.",
+            "The server is requesting your verified identity document.",
             Icons.Filled.Security
         )
         else -> Triple(
@@ -158,7 +157,7 @@ fun ShareEmailCredentialApprovalScreenReadyPreview() {
 fun ShareDocumentCredentialApprovalScreenReadyPreview() {
     ShareCredentialApprovalScreen(
         credentialType = CredentialType.Document,
-        requestState = ServerRequestState.RequestReceived(subjects = listOf("dateOfBirth")),
+        requestState = ServerRequestState.RequestReceived(),
         onApprove = {},
         onDeny = {}
     )
