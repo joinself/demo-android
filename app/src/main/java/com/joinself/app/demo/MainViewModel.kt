@@ -153,40 +153,6 @@ class MainViewModel(context: Context): ViewModel() {
                 isRegistered = account.registered(),
             )
         }
-
-        // setup listeners which receive events from the server.
-//        account.setOnMessageListener { msg ->
-//            when (msg) {
-//                // receive custom credentials messages
-//                is CredentialMessage -> {
-//                    Log.d("Self", "received credential message")
-//                    receivedCredentials.clear()
-//                    receivedCredentials.addAll(msg.credentials())
-//
-//                    _appUiState.update { it.copy(requestState = ServerRequestState.RequestReceived()) }
-//
-//                    cancelRequestTimeout()
-//                }
-//            }
-//        }
-//        account.setOnRequestListener { msg ->
-//            when (msg) {
-//                is CredentialRequest -> {
-//                    credentialRequest = msg
-//                    _appUiState.update { it.copy(requestState = ServerRequestState.RequestReceived(types = msg.details().flatMap { d -> d.types() }, subjects = msg.details().map { d -> d.subject() })) }
-//                }
-//                is VerificationRequest -> {
-//                    // check the request is agreement, this example will respond automatically to the request
-//                    // users need to handle msg.proofs() which contains agreement content, to display to user
-//                    if (msg.types().contains(CredentialType.Agreement)) {
-//                        verificationRequest = msg
-//                        _appUiState.update { it.copy(requestState = ServerRequestState.RequestReceived()) }
-//                    }
-//                }
-//            }
-//
-//            cancelRequestTimeout()
-//        }
     }
 
 
@@ -236,6 +202,10 @@ class MainViewModel(context: Context): ViewModel() {
         verificationRequest = null
     }
 
+    fun setBackupRestoreState(state: BackupRestoreState) {
+        _appUiState.update { it.copy(backupRestoreState = state) }
+    }
+
 
     /**
      * Notifies the server about a request by sending a chat message.
@@ -267,106 +237,4 @@ class MainViewModel(context: Context): ViewModel() {
     private fun cancelRequestTimeout() {
         requestTimeoutJob?.cancel()
     }
-
-    /**
-     * Sends a response to a credential request.
-     * This function constructs and sends a [CredentialResponse] based on the received [CredentialRequest].
-     */
-//    fun sendCredentialResponse(credentials: List<Credential>, status: ResponseStatus) {
-//        if (credentialRequest == null) return
-//
-//        val credentialResponse = CredentialResponse.Builder()
-//            .setRequestId(credentialRequest!!.id())
-//            .setTypes(credentialRequest!!.types())
-//            .setToIdentifier(credentialRequest!!.toIdentifier())
-//            .setFromIdentifier(credentialRequest!!.fromIdentifier())
-//            .setStatus(status)
-//            .setCredentials(credentials)
-//            .build()
-//
-//        viewModelScope.launch(Dispatchers.IO) {
-//            account.send(credentialResponse) { messageId, _ ->
-//                _appUiState.update { it.copy(requestState = ServerRequestState.ResponseSent(status)) }
-//            }
-//        }
-//    }
-
-    /**
-     * Looks up credentials based on the details of the credential request and sends a response.
-     * The credentials are store in the account after you verify email, document or get custom credentials.
-     *
-     * If there is no pending credential request, the function returns without doing anything.
-     *
-     * @param status The status of the response to be sent (e.g., accepted, rejected).
-     */
-//    fun shareCredential(status: ResponseStatus) {
-//        if (credentialRequest == null) return
-//
-//        val details = credentialRequest!!.details().map {
-//            Claim.Builder()
-//                .setTypes(it.types())
-//                .setSubject(it.subject())
-//                .setComparisonOperator(it.comparisonOperator())
-//                .setValue(it.value())
-//                .build()
-//        }
-//        val storedCredentials = account.lookUpCredentials(details)
-//
-//        sendCredentialResponse(storedCredentials, status)
-//    }
-
-    /**
-     * Stores the received custom credentials in the account.
-     */
-//    fun storeCredentials() {
-//        account.storeCredentials(receivedCredentials)
-//        receivedCredentials.clear()
-//    }
-
-    /**
-     * Sends a verification response to the server.
-     */
-//    fun sendDocSignResponse(status: ResponseStatus) {
-//        if (verificationRequest == null) return
-//
-//        val verificationResponse = VerificationResponse.Builder()
-//            .setRequestId(verificationRequest!!.id())
-//            .setTypes(verificationRequest!!.types())
-//            .setToIdentifier(verificationRequest!!.toIdentifier())
-//            .setFromIdentifier(verificationRequest!!.fromIdentifier())
-//            .setStatus(status)
-//            .build()
-//        viewModelScope.launch(Dispatchers.IO) {
-//            account.send(verificationResponse) { messageId, _ ->
-//                _appUiState.update { it.copy(requestState = ServerRequestState.ResponseSent(status)) }
-//            }
-//        }
-//    }
-
-    /**
-     * Backs up the account data.
-     * @return A [ByteArray] containing the backup data.
-     */
-//    suspend fun backup(): ByteArray {
-//        _appUiState.update { it.copy(backupRestoreState = BackupRestoreState.Processing) }
-//        val backupBytes = account.backup()
-//        _appUiState.update { it.copy(backupRestoreState = BackupRestoreState.Success) }
-//        return backupBytes
-//    }
-
-
-    /**
-     * Restores the account from a backup. This function attempts to restore the user's account using the provided backup data and selfie image.
-     * @param backupBytes A ByteArray containing the account backup data.
-     * @param selfieBytes A ByteArray containing the user's selfie image for verification.
-     */
-//    suspend fun restore(backupBytes: ByteArray, selfieBytes: ByteArray) {
-//        try {
-//            _appUiState.update { it.copy(backupRestoreState = BackupRestoreState.Processing) }
-//            account.restore(backupBytes, selfieBytes)
-//            _appUiState.update { it.copy(backupRestoreState = BackupRestoreState.Success) }
-//        } catch (ex: Exception) {
-//            _appUiState.update { it.copy(backupRestoreState = BackupRestoreState.Error(ex.message ?: "restore failed")) }
-//        }
-//    }
 }
