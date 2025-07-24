@@ -58,10 +58,12 @@ import com.joinself.sdk.models.CredentialRequest
 import com.joinself.sdk.models.VerificationRequest
 import com.joinself.sdk.ui.DisplayRequestUI
 import com.joinself.sdk.ui.integrateUIFlows
+import com.joinself.sdk.ui.openBackupFlow
 import com.joinself.sdk.ui.openDocumentVerificationFlow
 import com.joinself.sdk.ui.openEmailVerificationFlow
 import com.joinself.sdk.ui.openQRCodeFlow
 import com.joinself.sdk.ui.openRegistrationFlow
+import com.joinself.sdk.ui.openRestoreFlow
 import com.joinself.sdk.utils.popAllBackStacks
 import com.joinself.ui.component.LoadingDialog
 import com.joinself.ui.theme.SelfModifier
@@ -101,13 +103,6 @@ sealed class MainRoute {
     @Serializable object BackupResult
     @Serializable object RestoreStart
     @Serializable object RestoreResult
-
-    companion object {
-//        val LivenessRoute = "livenessRoute"
-//        val EmailRoute = "emailRoute"
-//        val DocumentRoute = "documentRoute"
-//        val QRCodeRoute = "qrCodeRoute"
-    }
 }
 
 @Composable
@@ -140,32 +135,32 @@ fun SelfDemoApp(
     }
 
     // picker to select backup file from local storage
-    var isRestoreFlow by remember { mutableStateOf(false) }
-    var selfieByteArray by remember { mutableStateOf(byteArrayOf()) }
-    val pickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
-    ) { uri: Uri? ->
-        uri?.let {
-            val backupBytes = context.contentResolver.openInputStream(it)?.use { input ->
-                input.readBytes()
-            }
-            if (backupBytes != null && backupBytes.isNotEmpty() && selfieByteArray.isNotEmpty()) {
-                coroutineScope.launch(Dispatchers.IO) {
-                    try {
-//                        viewModel.restore(backupBytes, selfieByteArray)
-                    } catch (ex: Exception) {
-                        Log.e("SelfSDK", "restore error", ex)
-                        withContext(Dispatchers.Main) {
-                            Toast.makeText(context, "Restore failed: ${ex.message}", Toast.LENGTH_LONG).show()
-                        }
-                    }
-                    withContext(Dispatchers.Main) {
-                        navController.navigate(MainRoute.RestoreResult)
-                    }
-                }
-            }
-        }
-    }
+//    var isRestoreFlow by remember { mutableStateOf(false) }
+//    var selfieByteArray by remember { mutableStateOf(byteArrayOf()) }
+//    val pickerLauncher = rememberLauncherForActivityResult(
+//        contract = ActivityResultContracts.GetContent()
+//    ) { uri: Uri? ->
+//        uri?.let {
+//            val backupBytes = context.contentResolver.openInputStream(it)?.use { input ->
+//                input.readBytes()
+//            }
+//            if (backupBytes != null && backupBytes.isNotEmpty() && selfieByteArray.isNotEmpty()) {
+//                coroutineScope.launch(Dispatchers.IO) {
+//                    try {
+////                        viewModel.restore(backupBytes, selfieByteArray)
+//                    } catch (ex: Exception) {
+//                        Log.e("SelfSDK", "restore error", ex)
+//                        withContext(Dispatchers.Main) {
+//                            Toast.makeText(context, "Restore failed: ${ex.message}", Toast.LENGTH_LONG).show()
+//                        }
+//                    }
+//                    withContext(Dispatchers.Main) {
+//                        navController.navigate(MainRoute.RestoreResult)
+//                    }
+//                }
+//            }
+//        }
+//    }
 
     NavHost(
         navController = navController,
@@ -611,11 +606,14 @@ fun SelfDemoApp(
             BackupStartScreen(
                 backupState = appState.backupRestoreState,
                 onStartBackup = {
-                    coroutineScope.launch(Dispatchers.IO) {
-//                        backupByteArray = viewModel.backup()
-//                        withContext(Dispatchers.Main) {
-//                            navController.navigate(MainRoute.BackupResult)
-//                        }
+                    coroutineScope.launch(Dispatchers.Main) {
+                        viewModel.account.openBackupFlow(onFinish = { isSuccess, error ->
+                            if (isSuccess) {
+                                coroutineScope.launch(Dispatchers.Main) {
+                                    navController.navigate(MainRoute.BackupResult)
+                                }
+                            }
+                        })
                     }
                 }
             )
@@ -634,8 +632,15 @@ fun SelfDemoApp(
             RestoreStartScreen(
                 restoreState = appState.backupRestoreState,
                 onStartRestore = {
-                    isRestoreFlow = true
-//                    navController.navigate(MainRoute.LivenessRoute)
+                    coroutineScope.launch(Dispatchers.Main) {
+                        viewModel.account.openRestoreFlow(onFinish = { isSuccess, error ->
+                            if (isSuccess) {
+                                coroutineScope.launch(Dispatchers.Main) {
+                                    navController.navigate(MainRoute.RestoreResult)
+                                }
+                            }
+                        })
+                    }
                 }
             )
             if (appState.backupRestoreState is BackupRestoreState.Processing) {
@@ -646,7 +651,6 @@ fun SelfDemoApp(
             RestoreResultScreen(
                 restoreState = appState.backupRestoreState,
                 onContinue = {
-                    isRestoreFlow = false
                     navController.popAllBackStacks()
                     navController.navigate(MainRoute.ConnectToServerSelection)
                 },
