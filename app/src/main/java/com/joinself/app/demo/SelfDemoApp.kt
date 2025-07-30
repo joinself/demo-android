@@ -289,7 +289,7 @@ fun SelfDemoApp(
                             viewModel.notifyServerForRequest(SERVER_REQUESTS.REQUEST_CREDENTIAL_AUTH)
                         }
                     }
-                    is ServerRequestState.ResponseSent -> {
+                    is ServerRequestState.ResponseSent, is ServerRequestState.RequestError -> {
                         withContext(Dispatchers.Main){
                             navController.navigate(MainRoute.AuthResultResult)
                         }
@@ -390,7 +390,7 @@ fun SelfDemoApp(
             LaunchedEffect(appState.requestState) {
                 Log.d(TAG, "custom credential state: ${appState.requestState}")
                 when (appState.requestState) {
-                    is ServerRequestState.ResponseSent -> {
+                    is ServerRequestState.ResponseSent, is ServerRequestState.RequestError -> {
                         withContext(Dispatchers.Main){
                             navController.navigate(MainRoute.GetCustomCredentialResult)
                         }
@@ -481,7 +481,7 @@ fun SelfDemoApp(
                             else if (credentialType == CredentialType.Custom) viewModel.notifyServerForRequest(SERVER_REQUESTS.REQUEST_CREDENTIAL_CUSTOM)
                         }
                     }
-                    is ServerRequestState.ResponseSent -> {
+                    is ServerRequestState.ResponseSent, is ServerRequestState.RequestError -> {
                         withContext(Dispatchers.Main) {
                             navController.navigate(MainRoute.ShareCredentialResult)
                         }
@@ -537,7 +537,7 @@ fun SelfDemoApp(
                             viewModel.notifyServerForRequest(SERVER_REQUESTS.REQUEST_DOCUMENT_SIGNING)
                         }
                     }
-                    is ServerRequestState.ResponseSent -> {
+                    is ServerRequestState.ResponseSent, is ServerRequestState.RequestError -> {
                         withContext(Dispatchers.Main){
                             navController.navigate(MainRoute.DocumentSignResult)
                         }

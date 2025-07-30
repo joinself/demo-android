@@ -178,10 +178,10 @@ class MainViewModel(context: Context): ViewModel() {
         }
     }
 
-    suspend fun connect(inboxAddress: String, qrCode: ByteArray) {
+    suspend fun connect(inboxAddress: PublicKey, qrCode: ByteArray) {
         try {
             groupAddress = account.connectWith(qrCode)
-            serverInboxAddress = inboxAddress
+            serverInboxAddress = inboxAddress.hex
 
             if (groupAddress.isNotEmpty()) {
                 _appUiState.update { it.copy(serverState = ServerState.Success) }
