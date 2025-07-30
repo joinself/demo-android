@@ -80,8 +80,8 @@ class MainViewModel(context: Context): ViewModel() {
     val appStateFlow: StateFlow<AppUiState> = _appUiState.asStateFlow()
 
     val account: Account
-    var serverInboxAddress: String = ""
-    private var groupAddress: String = ""
+    var serverInboxAddress: PublicKey? = null
+    private var groupAddress: PublicKey? = null
     private var credentialRequest: CredentialRequest? = null
     private var verificationRequest: VerificationRequest? = null
     private var requestTimeoutJob: Job? = null
@@ -164,10 +164,10 @@ class MainViewModel(context: Context): ViewModel() {
     suspend fun connect(inboxAddress: String) {
         try {
             _appUiState.update { it.copy(serverState = ServerState.Connecting) }
-            serverInboxAddress = inboxAddress
+            serverInboxAddress = PublicKey(inboxAddress)
 
-            groupAddress = account.connectWith(PublicKey(serverInboxAddress), info = mapOf())
-            if (groupAddress.isNotEmpty()) {
+            groupAddress = account.connectWith(serverInboxAddress!!, info = mapOf())
+            if (groupAddress != null) {
                 _appUiState.update { it.copy(serverState = ServerState.Success) }
             } else {
                 _appUiState.update { it.copy(serverState = ServerState.Error("failed to connect to server")) }
@@ -181,9 +181,9 @@ class MainViewModel(context: Context): ViewModel() {
     suspend fun connect(inboxAddress: PublicKey, qrCode: ByteArray) {
         try {
             groupAddress = account.connectWith(qrCode)
-            serverInboxAddress = inboxAddress.hex
+            serverInboxAddress = inboxAddress
 
-            if (groupAddress.isNotEmpty()) {
+            if (groupAddress != null) {
                 _appUiState.update { it.copy(serverState = ServerState.Success) }
             } else {
                 _appUiState.update { it.copy(serverState = ServerState.Error("failed to connect to server")) }
@@ -212,12 +212,14 @@ class MainViewModel(context: Context): ViewModel() {
      * After server receive a chat message, it will check the content and send a request message.
      */
     suspend fun notifyServerForRequest(message: String) {
+        requireNotNull(serverInboxAddress)
+
         val chat = ChatMessage.Builder()
             .setMessage(message)
             .build()
 
         // send chat to server
-        val messageId = account.send(toAddress = PublicKey(serverInboxAddress), chat)
+        val messageId = account.send(toAddress = serverInboxAddress!!, chat)
         _appUiState.update { it.copy(requestState = ServerRequestState.RequestSent) }
 
         startRequestTimeout()

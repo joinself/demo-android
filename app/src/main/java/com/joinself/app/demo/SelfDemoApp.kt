@@ -205,7 +205,7 @@ fun SelfDemoApp(
         }
         composable<MainRoute.ConnectingToServer> {
             ServerConnectResultScreen(
-                serverAddress = viewModel.serverInboxAddress,
+                serverAddress = viewModel.serverInboxAddress?.hex ?: "",
                 serverState = appState.serverState,
                 onContinue = {
                     navController.popAllBackStacks()
