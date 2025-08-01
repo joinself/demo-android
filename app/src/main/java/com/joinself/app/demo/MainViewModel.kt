@@ -9,21 +9,17 @@ import com.joinself.common.Environment
 import com.joinself.sdk.SelfSDK
 import com.joinself.sdk.models.Account
 import com.joinself.sdk.models.ChatMessage
-import com.joinself.sdk.models.Claim
-import com.joinself.sdk.models.Credential
 import com.joinself.sdk.models.CredentialMessage
 import com.joinself.sdk.models.CredentialRequest
-import com.joinself.sdk.models.CredentialResponse
+import com.joinself.sdk.models.Message
+import com.joinself.sdk.models.PublicKey
 import com.joinself.sdk.models.ResponseStatus
-import com.joinself.sdk.models.SigningRequest
 import com.joinself.sdk.models.VerificationRequest
-import com.joinself.sdk.models.VerificationResponse
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -84,13 +80,12 @@ class MainViewModel(context: Context): ViewModel() {
     val appStateFlow: StateFlow<AppUiState> = _appUiState.asStateFlow()
 
     val account: Account
-    var serverInboxAddress: String = ""
-    private var groupAddress: String = ""
+    var serverInboxAddress: PublicKey? = null
+    private var groupAddress: PublicKey? = null
     private var credentialRequest: CredentialRequest? = null
     private var verificationRequest: VerificationRequest? = null
-    private var signingRequest: SigningRequest? = null
     private var requestTimeoutJob: Job? = null
-    private val receivedCredentials = mutableListOf<Credential>()
+//    private val receivedCredentials = mutableListOf<Credential>()
 
     init {
         // init the sdk
@@ -109,61 +104,54 @@ class MainViewModel(context: Context): ViewModel() {
             .setEnvironment(Environment.production)
             .setSandbox(true)
             .setStoragePath(storagePath.absolutePath)
+            .setCallbacks(object : Account.Callbacks {
+                override fun onMessage(message: Message) {
+                    Log.d("Self", "onMessage: ${message.id()}")
+
+                    when (message) {
+                        is CredentialMessage -> {
+                            _appUiState.update { it.copy(requestState = ServerRequestState.RequestReceived(message))}
+                        }
+                        is CredentialRequest -> {
+                            credentialRequest = message
+                            _appUiState.update { it.copy(requestState = ServerRequestState.RequestReceived(message))}
+                        }
+                        is VerificationRequest -> {
+                            // check the request is agreement, this example will respond automatically to the request
+                            // users need to handle msg.proofs() which contains agreement content, to display to user
+                            if (message.types().contains(CredentialType.Agreement)) {
+                                verificationRequest = message
+                                _appUiState.update { it.copy(requestState = ServerRequestState.RequestReceived(message)) }
+                            }
+                        }
+                    }
+
+                    cancelRequestTimeout()
+                }
+                override fun onConnect() {
+                    Log.d("Self", "onConnect")
+                    _appUiState.update {
+                        it.copy(
+                            initialization = InitializationState.Success
+                        )
+                    }
+                }
+                override fun onDisconnect(errorMessage: String?) {
+                    Log.d("Self", "onDisconnect: $errorMessage")
+                }
+                override fun onAcknowledgement(id: String) {
+                    Log.d("Self", "onAcknowledgement: $id")
+                }
+                override fun onError(id: String, errorMessage: String?) {
+                    Log.d("Self", "onError: $errorMessage")
+                }
+            })
             .build()
 
         _appUiState.update {
             it.copy(
                 isRegistered = account.registered(),
             )
-        }
-
-        // setup listeners which receive events from the server.
-        account.setOnStatusListener { status ->
-            Log.d(TAG, "initialize status $status")
-
-            _appUiState.update {
-                it.copy(
-                    initialization = if (status == 0L) InitializationState.Success else InitializationState.Error("can't initialize account"),
-                )
-            }
-        }
-        account.setOnMessageListener { msg ->
-            when (msg) {
-                // receive custom credentials messages
-                is CredentialMessage -> {
-                    Log.d("Self", "received credential message")
-                    receivedCredentials.clear()
-                    receivedCredentials.addAll(msg.credentials())
-
-                    _appUiState.update { it.copy(requestState = ServerRequestState.RequestReceived()) }
-
-                    cancelRequestTimeout()
-                }
-            }
-        }
-        account.setOnRequestListener { msg ->
-            when (msg) {
-                is CredentialRequest -> {
-                    credentialRequest = msg
-                    _appUiState.update { it.copy(requestState = ServerRequestState.RequestReceived(msg))}
-                }
-                is VerificationRequest -> {
-                    // check the request is agreement, this example will respond automatically to the request
-                    // users need to handle msg.proofs() which contains agreement content, to display to user
-                    if (msg.types().contains(CredentialType.Agreement)) {
-                        verificationRequest = msg
-                        _appUiState.update { it.copy(requestState = ServerRequestState.RequestReceived(msg)) }
-
-                    }
-                }
-                is SigningRequest -> {
-                    signingRequest = msg
-                    _appUiState.update { it.copy(requestState = ServerRequestState.RequestReceived(msg)) }
-
-                }
-            }
-
-            cancelRequestTimeout()
         }
     }
 
@@ -172,23 +160,14 @@ class MainViewModel(context: Context): ViewModel() {
         return account.registered()
     }
 
-    /**
-     * register an account with a selfie and selfie's credentials
-     */
-    suspend fun register(selfie: ByteArray, credentials: List<Credential>): Boolean {
-        val success = account.register(selfieImage = selfie, credentials = credentials)
-
-        return success
-    }
-
     // connect with server using an inbox address
     suspend fun connect(inboxAddress: String) {
         try {
             _appUiState.update { it.copy(serverState = ServerState.Connecting) }
-            serverInboxAddress = inboxAddress
+            serverInboxAddress = PublicKey(inboxAddress)
 
-            groupAddress = account.connectWith(serverInboxAddress, info = mapOf())
-            if (groupAddress.isNotEmpty()) {
+            groupAddress = account.connectWith(serverInboxAddress!!, info = mapOf())
+            if (groupAddress != null) {
                 _appUiState.update { it.copy(serverState = ServerState.Success) }
             } else {
                 _appUiState.update { it.copy(serverState = ServerState.Error("failed to connect to server")) }
@@ -199,12 +178,12 @@ class MainViewModel(context: Context): ViewModel() {
         }
     }
 
-    suspend fun connect(inboxAddress: String, qrCode: ByteArray) {
+    suspend fun connect(inboxAddress: PublicKey, qrCode: ByteArray) {
         try {
             groupAddress = account.connectWith(qrCode)
             serverInboxAddress = inboxAddress
 
-            if (groupAddress.isNotEmpty()) {
+            if (groupAddress != null) {
                 _appUiState.update { it.copy(serverState = ServerState.Success) }
             } else {
                 _appUiState.update { it.copy(serverState = ServerState.Error("failed to connect to server")) }
@@ -223,21 +202,25 @@ class MainViewModel(context: Context): ViewModel() {
         verificationRequest = null
     }
 
+    fun setBackupRestoreState(state: BackupRestoreState) {
+        _appUiState.update { it.copy(backupRestoreState = state) }
+    }
+
 
     /**
      * Notifies the server about a request by sending a chat message.
      * After server receive a chat message, it will check the content and send a request message.
      */
     suspend fun notifyServerForRequest(message: String) {
+        requireNotNull(serverInboxAddress)
+
         val chat = ChatMessage.Builder()
-            .setToIdentifier(groupAddress)
             .setMessage(message)
             .build()
 
         // send chat to server
-        account.send(chat) { messageId, _ ->
-            _appUiState.update { it.copy(requestState = ServerRequestState.RequestSent) }
-        }
+        val messageId = account.send(toAddress = serverInboxAddress!!, chat)
+        _appUiState.update { it.copy(requestState = ServerRequestState.RequestSent) }
 
         startRequestTimeout()
     }
@@ -255,112 +238,5 @@ class MainViewModel(context: Context): ViewModel() {
     }
     private fun cancelRequestTimeout() {
         requestTimeoutJob?.cancel()
-    }
-
-    /**
-     * Sends a response to a credential request.
-     * This function constructs and sends a [CredentialResponse] based on the received [CredentialRequest].
-     */
-    fun sendCredentialResponse(credentials: List<Credential>, status: ResponseStatus) {
-        if (credentialRequest == null) return
-
-        val credentialResponse = CredentialResponse.Builder()
-            .setRequestId(credentialRequest!!.id())
-            .setTypes(credentialRequest!!.types())
-            .setToIdentifier(credentialRequest!!.toIdentifier())
-            .setFromIdentifier(credentialRequest!!.fromIdentifier())
-            .setStatus(status)
-            .setCredentials(credentials)
-            .build()
-
-        viewModelScope.launch(Dispatchers.IO) {
-            account.send(credentialResponse) { messageId, _ ->
-                _appUiState.update { it.copy(requestState = ServerRequestState.ResponseSent(status)) }
-            }
-        }
-    }
-
-    /**
-     * Looks up credentials based on the details of the credential request and sends a response.
-     * The credentials are store in the account after you verify email, document or get custom credentials.
-     *
-     * If there is no pending credential request, the function returns without doing anything.
-     *
-     * @param status The status of the response to be sent (e.g., accepted, rejected).
-     */
-    fun shareCredential(status: ResponseStatus) {
-        if (credentialRequest == null) return
-
-        val details = credentialRequest!!.details().map {
-            Claim.Builder()
-                .setTypes(it.types())
-                .setSubject(it.subject())
-                .setComparisonOperator(it.comparisonOperator())
-                .setValue(it.value())
-                .build()
-        }
-        val storedCredentials = account.lookUpCredentials(details)
-
-        sendCredentialResponse(storedCredentials, status)
-    }
-
-    /**
-     * Stores the received custom credentials in the account.
-     */
-    fun storeCredentials() {
-        account.storeCredentials(receivedCredentials)
-        receivedCredentials.clear()
-    }
-
-    /**
-     * Sends a verification response to the server.
-     */
-    fun sendDocSignResponse(status: ResponseStatus) {
-        if (verificationRequest == null) return
-
-        val verificationResponse = VerificationResponse.Builder()
-            .setRequestId(verificationRequest!!.id())
-            .setTypes(verificationRequest!!.types())
-            .setToIdentifier(verificationRequest!!.toIdentifier())
-            .setFromIdentifier(verificationRequest!!.fromIdentifier())
-            .setStatus(status)
-            .build()
-        verificationResponse.addProperties(verificationRequest!!.properties())
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                account.send(verificationResponse) { messageId, _ ->
-                    _appUiState.update { it.copy(requestState = ServerRequestState.ResponseSent(status)) }
-                }
-            } catch (ex: Exception) {
-                _appUiState.update { it.copy(requestState = ServerRequestState.RequestError(ex.message ?: "failed to send response")) }
-            }
-        }
-    }
-
-    /**
-     * Backs up the account data.
-     * @return A [ByteArray] containing the backup data.
-     */
-    suspend fun backup(): ByteArray {
-        _appUiState.update { it.copy(backupRestoreState = BackupRestoreState.Processing) }
-        val backupBytes = account.backup()
-        _appUiState.update { it.copy(backupRestoreState = BackupRestoreState.Success) }
-        return backupBytes
-    }
-
-
-    /**
-     * Restores the account from a backup. This function attempts to restore the user's account using the provided backup data and selfie image.
-     * @param backupBytes A ByteArray containing the account backup data.
-     * @param selfieBytes A ByteArray containing the user's selfie image for verification.
-     */
-    suspend fun restore(backupBytes: ByteArray, selfieBytes: ByteArray) {
-        try {
-            _appUiState.update { it.copy(backupRestoreState = BackupRestoreState.Processing) }
-            account.restore(backupBytes, selfieBytes)
-            _appUiState.update { it.copy(backupRestoreState = BackupRestoreState.Success) }
-        } catch (ex: Exception) {
-            _appUiState.update { it.copy(backupRestoreState = BackupRestoreState.Error(ex.message ?: "restore failed")) }
-        }
     }
 }

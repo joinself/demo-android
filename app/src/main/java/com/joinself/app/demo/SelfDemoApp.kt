@@ -1,15 +1,12 @@
 package com.joinself.app.demo
 
-import android.net.Uri
 import android.util.Log
-import android.widget.Toast
 import androidx.activity.compose.BackHandler
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -17,8 +14,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -47,17 +47,19 @@ import com.joinself.app.demo.ui.screens.VerifyDocumentStartScreen
 import com.joinself.app.demo.ui.screens.VerifyEmailResultScreen
 import com.joinself.app.demo.ui.screens.VerifyEmailStartScreen
 import com.joinself.app.demo.ui.screens.VerifySelectionScreen
-import com.joinself.common.Constants
 import com.joinself.common.CredentialType
-import com.joinself.common.exception.InvalidCredentialException
-import com.joinself.sdk.models.Account
+import com.joinself.sdk.SelfSDK
+import com.joinself.sdk.models.CredentialMessage
 import com.joinself.sdk.models.CredentialRequest
-import com.joinself.sdk.models.ResponseStatus
 import com.joinself.sdk.models.VerificationRequest
-import com.joinself.sdk.ui.adQRCodeRoute
-import com.joinself.sdk.ui.addDocumentVerificationRoute
-import com.joinself.sdk.ui.addEmailRoute
-import com.joinself.sdk.ui.addLivenessCheckRoute
+import com.joinself.sdk.ui.DisplayRequestUI
+import com.joinself.sdk.ui.integrateUIFlows
+import com.joinself.sdk.ui.openBackupFlow
+import com.joinself.sdk.ui.openDocumentVerificationFlow
+import com.joinself.sdk.ui.openEmailVerificationFlow
+import com.joinself.sdk.ui.openQRCodeFlow
+import com.joinself.sdk.ui.openRegistrationFlow
+import com.joinself.sdk.ui.openRestoreFlow
 import com.joinself.sdk.utils.popAllBackStacks
 import com.joinself.ui.component.LoadingDialog
 import com.joinself.ui.theme.SelfModifier
@@ -66,10 +68,9 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
-import kotlin.collections.isNotEmpty
 
 
-private const val TAG = "SelfDemoApp"
+private const val TAG = "SelfSDKDemoApp"
 
 sealed class MainRoute {
     @Serializable object Initializing
@@ -98,13 +99,6 @@ sealed class MainRoute {
     @Serializable object BackupResult
     @Serializable object RestoreStart
     @Serializable object RestoreResult
-
-    companion object {
-        val LivenessRoute = "livenessRoute"
-        val EmailRoute = "emailRoute"
-        val DocumentRoute = "documentRoute"
-        val QRCodeRoute = "qrCodeRoute"
-    }
 }
 
 @Composable
@@ -124,46 +118,6 @@ fun SelfDemoApp(
 
     var credentialType by remember { mutableStateOf("") }
 
-    // picker to save backup file to local storage
-    var backupByteArray by remember { mutableStateOf(byteArrayOf()) }
-    val saveLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.CreateDocument("application/octet-stream")
-    ) { uri: Uri? ->
-        uri?.let {
-            context.contentResolver.openOutputStream(uri)?.use { outputStream ->
-                outputStream.write(backupByteArray)
-            }
-        }
-    }
-
-    // picker to select backup file from local storage
-    var isRestoreFlow by remember { mutableStateOf(false) }
-    var selfieByteArray by remember { mutableStateOf(byteArrayOf()) }
-    val pickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
-    ) { uri: Uri? ->
-        uri?.let {
-            val backupBytes = context.contentResolver.openInputStream(it)?.use { input ->
-                input.readBytes()
-            }
-            if (backupBytes != null && backupBytes.isNotEmpty() && selfieByteArray.isNotEmpty()) {
-                coroutineScope.launch(Dispatchers.IO) {
-                    try {
-                        viewModel.restore(backupBytes, selfieByteArray)
-                    } catch (ex: Exception) {
-                        Log.e("SelfSDK", "restore error", ex)
-                        withContext(Dispatchers.Main) {
-                            Toast.makeText(context, "Restore failed: ${ex.message}", Toast.LENGTH_LONG).show()
-                        }
-                    }
-                    withContext(Dispatchers.Main) {
-                        navController.navigate(MainRoute.RestoreResult)
-                    }
-                }
-            }
-        }
-    }
-
     NavHost(
         navController = navController,
         startDestination = MainRoute.Initializing,
@@ -171,7 +125,7 @@ fun SelfDemoApp(
         enterTransition = { EnterTransition.None },
         exitTransition = { ExitTransition.None }
     ) {
-
+        SelfSDK.integrateUIFlows(this, navController, selfModifier = selfModifier)
         composable<MainRoute.Initializing> {
             InitializeSDKScreen(
                 initialization = appState.initialization,
@@ -197,7 +151,11 @@ fun SelfDemoApp(
         composable<MainRoute.Registration> {
             RegistrationIntroScreen( selfModifier = selfModifier,
                 onStartRegistration = {
-                    navController.navigate(MainRoute.LivenessRoute)
+                    viewModel.account.openRegistrationFlow { isSuccess, error ->
+                        coroutineScope.launch(Dispatchers.Main) {
+                            if (isSuccess) navController.navigate(MainRoute.ConnectToServerSelection)
+                        }
+                    }
                 },
                 onStartRestore = {
                     navController.navigate(MainRoute.RestoreStart)
@@ -211,7 +169,27 @@ fun SelfDemoApp(
                     navController.navigate(MainRoute.ConnectToServerAddress)
                 },
                 onQRCode = {
-                    navController.navigate(MainRoute.QRCodeRoute)
+                    viewModel.account.openQRCodeFlow(
+                        onFinish = { qrCode, discoveryData ->
+                            if (discoveryData == null || !discoveryData.sandbox) {
+                                return@openQRCodeFlow
+                            }
+
+                            coroutineScope.launch(Dispatchers.IO) {
+                                // then connect with the connection in the qrcode
+                                viewModel.connect(inboxAddress = discoveryData.address, qrCode = qrCode)
+
+                                withContext(Dispatchers.Main) {
+                                    if (appState.serverState is ServerState.Success) {
+                                        navController.navigate(MainRoute.ServerConnectionReady)
+                                    }
+                                }
+                            }
+                        },
+                        onExit = {
+                            navController.popBackStack()
+                        }
+                    )
                 }
             )
         }
@@ -227,7 +205,7 @@ fun SelfDemoApp(
         }
         composable<MainRoute.ConnectingToServer> {
             ServerConnectResultScreen(
-                serverAddress = viewModel.serverInboxAddress,
+                serverAddress = viewModel.serverInboxAddress?.hex ?: "",
                 serverState = appState.serverState,
                 onContinue = {
                     navController.popAllBackStacks()
@@ -275,10 +253,34 @@ fun SelfDemoApp(
             AuthRequestStartScreen(
                 requestState = appState.requestState,
                 onStartAuthentication = {
-                    navController.navigate(MainRoute.LivenessRoute)
+
                 }
             )
-
+            if (appState.requestState is ServerRequestState.RequestReceived) {
+                val request = (appState.requestState as ServerRequestState.RequestReceived).request
+                Dialog(
+                    onDismissRequest = { },
+                    properties = DialogProperties(
+                        dismissOnBackPress = false,
+                        dismissOnClickOutside = false,
+                        usePlatformDefaultWidth = false
+                    ),
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        when(request) {
+                            is CredentialRequest -> {
+                                viewModel.account.DisplayRequestUI(selfModifier, request, onFinish = { isSent, status ->
+                                    viewModel.resetState(requestState = if (isSent) ServerRequestState.ResponseSent(status) else ServerRequestState.RequestError("failed to respond"))
+                                })
+                            }
+                        }
+                    }
+                }
+            }
             LaunchedEffect(appState.requestState) {
                 Log.d(TAG, "auth request state: ${appState.requestState}")
                 when (appState.requestState) {
@@ -287,7 +289,7 @@ fun SelfDemoApp(
                             viewModel.notifyServerForRequest(SERVER_REQUESTS.REQUEST_CREDENTIAL_AUTH)
                         }
                     }
-                    is ServerRequestState.ResponseSent -> {
+                    is ServerRequestState.ResponseSent, is ServerRequestState.RequestError -> {
                         withContext(Dispatchers.Main){
                             navController.navigate(MainRoute.AuthResultResult)
                         }
@@ -324,7 +326,9 @@ fun SelfDemoApp(
         composable<MainRoute.VerifyEmailStart> {
             VerifyEmailStartScreen(
                 onStartVerification = {
-                    navController.navigate(MainRoute.EmailRoute)
+                    viewModel.account.openEmailVerificationFlow(onFinish = { isSuccess, error ->
+                        navController.navigate(MainRoute.VerifyEmailResult)
+                    })
                 }
             )
         }
@@ -339,7 +343,11 @@ fun SelfDemoApp(
         composable<MainRoute.VerifyDocumentStart> {
             VerifyDocumentStartScreen(
                 onStartVerification = {
-                    navController.navigate(MainRoute.DocumentRoute)
+                    viewModel.account.openDocumentVerificationFlow(isDevMode = false,
+                        onFinish = { isSuccess, error ->
+                            navController.navigate(MainRoute.VerifyDocumentResult)
+                        }
+                    )
                 }
             )
         }
@@ -359,10 +367,30 @@ fun SelfDemoApp(
                     }
                 }
             )
+            if (appState.requestState is ServerRequestState.RequestReceived) {
+                val request = (appState.requestState as ServerRequestState.RequestReceived).request
+                Dialog(
+                    onDismissRequest = { },
+                    properties = DialogProperties(dismissOnBackPress = false, dismissOnClickOutside = false, usePlatformDefaultWidth = false),
+                ) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        when(request) {
+                            is CredentialMessage -> {
+                                viewModel.account.DisplayRequestUI(selfModifier, request, onFinish = { isSent, status ->
+                                    viewModel.resetState(requestState = if (isSent) ServerRequestState.ResponseSent(status) else ServerRequestState.RequestError("failed to respond"))
+                                })
+                            }
+                        }
+                    }
+                }
+            }
             LaunchedEffect(appState.requestState) {
                 Log.d(TAG, "custom credential state: ${appState.requestState}")
                 when (appState.requestState) {
-                    is ServerRequestState.RequestReceived -> {
+                    is ServerRequestState.ResponseSent, is ServerRequestState.RequestError -> {
                         withContext(Dispatchers.Main){
                             navController.navigate(MainRoute.GetCustomCredentialResult)
                         }
@@ -377,7 +405,6 @@ fun SelfDemoApp(
                 credentialName = "Custom Credentials",
                 onContinue = {
                     navController.popBackStack(MainRoute.ServerConnectionReady, inclusive = false)
-                    viewModel.storeCredentials()
                 },
                 onRetry = {
                     navController.popBackStack()
@@ -413,12 +440,37 @@ fun SelfDemoApp(
                 credentialType = credentialType,
                 requestState = appState.requestState,
                 onApprove = {
-                    viewModel.shareCredential(status = ResponseStatus.accepted)
+
                 },
                 onDeny = {
-                    viewModel.shareCredential(status = ResponseStatus.rejected)
+
                 }
             )
+            if (appState.requestState is ServerRequestState.RequestReceived) {
+                val request = (appState.requestState as ServerRequestState.RequestReceived).request
+                Dialog(
+                    onDismissRequest = { },
+                    properties = DialogProperties(
+                        dismissOnBackPress = false,
+                        dismissOnClickOutside = false,
+                        usePlatformDefaultWidth = false
+                    ),
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        when(request) {
+                            is CredentialRequest -> {
+                                viewModel.account.DisplayRequestUI(selfModifier, request, onFinish = { isSent, status ->
+                                    viewModel.resetState(requestState = if (isSent) ServerRequestState.ResponseSent(status) else ServerRequestState.RequestError("failed to respond"))
+                                })
+                            }
+                        }
+                    }
+                }
+            }
             LaunchedEffect(appState.requestState) {
                 Log.d(TAG, "credential request state: ${appState.requestState}")
                 when (appState.requestState) {
@@ -429,20 +481,12 @@ fun SelfDemoApp(
                             else if (credentialType == CredentialType.Custom) viewModel.notifyServerForRequest(SERVER_REQUESTS.REQUEST_CREDENTIAL_CUSTOM)
                         }
                     }
-                    is ServerRequestState.ResponseSent -> {
+                    is ServerRequestState.ResponseSent, is ServerRequestState.RequestError -> {
                         withContext(Dispatchers.Main) {
                             navController.navigate(MainRoute.ShareCredentialResult)
                         }
                     }
                     else -> {}
-                }
-            }
-            DisposableEffect(true) {
-                onDispose {
-                    Log.d(TAG, "disposable request state: ${appState.requestState}")
-                    if (appState.requestState !is ServerRequestState.ResponseSent) {
-                        viewModel.resetState(ServerRequestState.None)
-                    }
                 }
             }
         }
@@ -459,12 +503,32 @@ fun SelfDemoApp(
             DocSignStartScreen(
                 requestState = appState.requestState,
                 onSign = {
-                    viewModel.sendDocSignResponse(status = ResponseStatus.accepted)
+
                 },
                 onReject = {
-                    viewModel.sendDocSignResponse(status = ResponseStatus.rejected)
+
                 }
             )
+            if (appState.requestState is ServerRequestState.RequestReceived) {
+                val request = (appState.requestState as ServerRequestState.RequestReceived).request
+                Dialog(
+                    onDismissRequest = { },
+                    properties = DialogProperties(dismissOnBackPress = false, dismissOnClickOutside = false, usePlatformDefaultWidth = false),
+                ) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        when(request) {
+                            is VerificationRequest -> {
+                                viewModel.account.DisplayRequestUI(selfModifier, request, onFinish = { isSent, status ->
+                                    viewModel.resetState(requestState = if (isSent) ServerRequestState.ResponseSent(status) else ServerRequestState.RequestError("failed to respond"))
+                                })
+                            }
+                        }
+                    }
+                }
+            }
             LaunchedEffect(appState.requestState) {
                 Log.d(TAG, "docsign request state: ${appState.requestState}")
                 when (appState.requestState) {
@@ -497,11 +561,17 @@ fun SelfDemoApp(
             BackupStartScreen(
                 backupState = appState.backupRestoreState,
                 onStartBackup = {
-                    coroutineScope.launch(Dispatchers.IO) {
-                        backupByteArray = viewModel.backup()
-                        withContext(Dispatchers.Main) {
-                            navController.navigate(MainRoute.BackupResult)
-                        }
+                    coroutineScope.launch(Dispatchers.Main) {
+                        viewModel.account.openBackupFlow(onFinish = { isSuccess, error ->
+                            if (isSuccess) {
+                                viewModel.setBackupRestoreState(state = BackupRestoreState.Success)
+                            } else {
+                                viewModel.setBackupRestoreState(state = BackupRestoreState.Error("failed to backup"))
+                            }
+                            coroutineScope.launch(Dispatchers.Main) {
+                                navController.navigate(MainRoute.BackupResult)
+                            }
+                        })
                     }
                 }
             )
@@ -511,7 +581,6 @@ fun SelfDemoApp(
                 backupState = appState.backupRestoreState,
                 onContinue = {
                     navController.popBackStack(MainRoute.ServerConnectionReady, inclusive = false)
-                    saveLauncher.launch("self_sdk.backup")
                 },
                 onRetry = {}
             )
@@ -520,8 +589,18 @@ fun SelfDemoApp(
             RestoreStartScreen(
                 restoreState = appState.backupRestoreState,
                 onStartRestore = {
-                    isRestoreFlow = true
-                    navController.navigate(MainRoute.LivenessRoute)
+                    coroutineScope.launch(Dispatchers.Main) {
+                        viewModel.account.openRestoreFlow(onFinish = { isSuccess, error ->
+                            if (isSuccess) {
+                                viewModel.setBackupRestoreState(state = BackupRestoreState.Success)
+                            } else {
+                                viewModel.setBackupRestoreState(state = BackupRestoreState.Error("failed to restore"))
+                            }
+                            coroutineScope.launch(Dispatchers.Main) {
+                                navController.navigate(MainRoute.RestoreResult)
+                            }
+                        })
+                    }
                 }
             )
             if (appState.backupRestoreState is BackupRestoreState.Processing) {
@@ -532,7 +611,6 @@ fun SelfDemoApp(
             RestoreResultScreen(
                 restoreState = appState.backupRestoreState,
                 onContinue = {
-                    isRestoreFlow = false
                     navController.popAllBackStacks()
                     navController.navigate(MainRoute.ConnectToServerSelection)
                 },
@@ -541,90 +619,6 @@ fun SelfDemoApp(
                 }
             )
         }
-
-        // add liveness check to main navigation
-        addLivenessCheckRoute(navController, route = MainRoute.LivenessRoute, selfModifier = selfModifier,
-            account = { viewModel.account },
-            withCredential = true,
-            onFinish = { selfie, credentials ->
-                if (isRestoreFlow) {
-                    selfieByteArray = selfie
-                    pickerLauncher.launch("application/octet-stream")
-                } else if (!viewModel.isRegistered()) {
-                    coroutineScope.launch(Dispatchers.IO) {
-                        try {
-                            if (selfie.isNotEmpty() && credentials.isNotEmpty()) {
-                                val success = viewModel.register(selfie = selfie, credentials = credentials)
-                                if (success) {
-                                    coroutineScope.launch(Dispatchers.Main) {
-                                        navController.popBackStack()
-                                        navController.navigate(MainRoute.ConnectToServerSelection)
-                                    }
-                                }
-                            }
-                        } catch (_: InvalidCredentialException) { }
-                    }
-                } else {
-                    viewModel.sendCredentialResponse(credentials, status = ResponseStatus.accepted)
-                }
-                // nav back to main
-                coroutineScope.launch(Dispatchers.Main) {
-                    navController.popBackStack(MainRoute.LivenessRoute, true)
-                }
-            }
-        )
-
-        // add email flow into main navigation
-        addEmailRoute(navController, route = MainRoute.EmailRoute, selfModifier = selfModifier,
-            account = { viewModel.account },
-            onFinish = { isSuccess, error ->
-                if (isSuccess) {
-                    coroutineScope.launch(Dispatchers.Main) {
-                        navController.navigate(MainRoute.VerifyEmailResult)
-                    }
-                }
-            }
-        )
-
-        // integrate passport, idcard verification flow
-        addDocumentVerificationRoute(navController, route = MainRoute.DocumentRoute, selfModifier = selfModifier,account = { viewModel.account },
-            isDevMode = { false }, // true for testing only
-            onFinish = { isSuccess, error ->
-                if (isSuccess) {
-                    coroutineScope.launch(Dispatchers.Main) {
-                        navController.navigate(MainRoute.VerifyDocumentResult)
-                    }
-                }
-            }
-        )
-
-        // integrate qr code flow
-        adQRCodeRoute(navController, MainRoute.QRCodeRoute, selfModifier = selfModifier,
-            onFinish = { qrCodeBytes, _ ->
-                coroutineScope.launch(Dispatchers.IO) {
-                    // parse qrcode first and check the correct environment
-                    val discoveryData = Account.qrCode(qrCodeBytes)
-                    if (discoveryData == null || !discoveryData.sandbox) {
-                        return@launch
-                    }
-
-                    // then connect with the connection in the qrcode
-                    viewModel.connect(inboxAddress = discoveryData.address, qrCode = qrCodeBytes)
-
-                    coroutineScope.launch(Dispatchers.Main) {
-                        navController.popBackStack(MainRoute.QRCodeRoute, true)
-                        if (appState.serverState is ServerState.Success) {
-                            navController.navigate(MainRoute.ServerConnectionReady)
-                        }
-                    }
-                }
-            },
-            onExit = {
-                coroutineScope.launch(Dispatchers.Main) {
-                    navController.popBackStack(MainRoute.QRCodeRoute, true)
-                }
-            }
-        )
     }
 
     LaunchedEffect(Unit) {
@@ -638,16 +632,8 @@ fun SelfDemoApp(
                     val request = (appState.requestState as ServerRequestState.RequestReceived).request
                     when (request) {
                         is CredentialRequest -> {
-                            val types = request.details().flatMap { d -> d.types() }
-                            val subjects = request.details().map { d -> d.subject() }
-                            if (types.contains(CredentialType.Liveness)) {
-                                navController.navigate(MainRoute.AuthRequestStart)
-                            } else if (types.contains(CredentialType.Passport)) {
-                                credentialType = CredentialType.Document
-                                navController.navigate(MainRoute.ShareCredentialApproval)
-                            }
+                            navController.navigate(MainRoute.ShareCredentialApproval)
                         }
-
                         is VerificationRequest -> {
                             navController.navigate(MainRoute.DocumentSignStart)
                         }

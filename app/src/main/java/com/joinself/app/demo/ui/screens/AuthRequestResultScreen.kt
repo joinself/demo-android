@@ -190,12 +190,3 @@ fun AuthRequestResultScreenFailurePreview() {
         onContinue = {}
     )
 }
-
-@Preview(showBackground = true, name = "Auth Request Result - Waiting")
-@Composable
-fun AuthRequestResultScreenWaitingPreview() {
-    AuthRequestResultScreen(
-        requestState = ServerRequestState.RequestSent,
-        onContinue = {}
-    )
-}

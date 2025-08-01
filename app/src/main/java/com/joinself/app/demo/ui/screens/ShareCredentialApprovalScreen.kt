@@ -7,13 +7,10 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Share
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Error
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import com.joinself.app.demo.ServerRequestState
 import com.joinself.common.CredentialType
 
@@ -25,6 +22,7 @@ fun ShareCredentialApprovalScreen(
     onDeny: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+//    val subject = (requestState as? ServerRequestState.RequestReceived)?.request. ?: listOf()
     val (title, description, icon) = when (credentialType) {
         CredentialType.Email -> Triple(
             "Share Email Credentials?",
@@ -33,7 +31,7 @@ fun ShareCredentialApprovalScreen(
         )
         CredentialType.Document -> Triple(
             "Share Document Credentials?",
-            "The server is requesting your verified identity document.",
+            "The server is requesting your verified identity document",
             Icons.Filled.Security
         )
         else -> Triple(
