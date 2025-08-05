@@ -111,17 +111,17 @@ fun AuthRequestStartScreen(
         }
 
         // Fixed Primary Button at Bottom
-        Column(
-            modifier = Modifier
-                .background(Color.White)
-                .padding(AppSpacing.screenPadding)
-        ) {
-            PrimaryButton(
-                title = "Start",
-                isDisabled = requestState !is ServerRequestState.RequestReceived,
-                onClick = onStartAuthentication
-            )
-        }
+//        Column(
+//            modifier = Modifier
+//                .background(Color.White)
+//                .padding(AppSpacing.screenPadding)
+//        ) {
+//            PrimaryButton(
+//                title = "Start",
+//                isDisabled = requestState !is ServerRequestState.RequestReceived,
+//                onClick = onStartAuthentication
+//            )
+//        }
     }
 }
 

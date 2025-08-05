@@ -6,6 +6,7 @@ import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -17,6 +18,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -151,9 +153,11 @@ fun SelfDemoApp(
         composable<MainRoute.Registration> {
             RegistrationIntroScreen( selfModifier = selfModifier,
                 onStartRegistration = {
-                    viewModel.account.openRegistrationFlow { isSuccess, error ->
-                        coroutineScope.launch(Dispatchers.Main) {
-                            if (isSuccess) navController.navigate(MainRoute.ConnectToServerSelection)
+                    coroutineScope.launch {
+                        viewModel.account.openRegistrationFlow { isSuccess, error ->
+                            coroutineScope.launch(Dispatchers.Main) {
+                                if (isSuccess) navController.navigate(MainRoute.ConnectToServerSelection)
+                            }
                         }
                     }
                 },
@@ -169,27 +173,29 @@ fun SelfDemoApp(
                     navController.navigate(MainRoute.ConnectToServerAddress)
                 },
                 onQRCode = {
-                    viewModel.account.openQRCodeFlow(
-                        onFinish = { qrCode, discoveryData ->
-                            if (discoveryData == null || !discoveryData.sandbox) {
-                                return@openQRCodeFlow
-                            }
+                    coroutineScope.launch {
+                        viewModel.account.openQRCodeFlow(
+                            onFinish = { qrCode, discoveryData ->
+                                if (discoveryData == null || !discoveryData.sandbox) {
+                                    return@openQRCodeFlow
+                                }
 
-                            coroutineScope.launch(Dispatchers.IO) {
-                                // then connect with the connection in the qrcode
-                                viewModel.connect(inboxAddress = discoveryData.address, qrCode = qrCode)
+                                coroutineScope.launch(Dispatchers.IO) {
+                                    // then connect with the connection in the qrcode
+                                    viewModel.connect(inboxAddress = discoveryData.address, qrCode = qrCode)
 
-                                withContext(Dispatchers.Main) {
-                                    if (appState.serverState is ServerState.Success) {
-                                        navController.navigate(MainRoute.ServerConnectionReady)
+                                    withContext(Dispatchers.Main) {
+                                        if (appState.serverState is ServerState.Success) {
+                                            navController.navigate(MainRoute.ServerConnectionReady)
+                                        }
                                     }
                                 }
+                            },
+                            onExit = {
+                                navController.popBackStack()
                             }
-                        },
-                        onExit = {
-                            navController.popBackStack()
-                        }
-                    )
+                        )
+                    }
                 }
             )
         }
@@ -267,8 +273,7 @@ fun SelfDemoApp(
                     ),
                 ) {
                     Box(
-                        modifier = Modifier
-                            .fillMaxSize(),
+                        modifier = Modifier.fillMaxSize().padding(top = 100.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         when(request) {
@@ -326,9 +331,11 @@ fun SelfDemoApp(
         composable<MainRoute.VerifyEmailStart> {
             VerifyEmailStartScreen(
                 onStartVerification = {
-                    viewModel.account.openEmailVerificationFlow(onFinish = { isSuccess, error ->
-                        navController.navigate(MainRoute.VerifyEmailResult)
-                    })
+                    coroutineScope.launch {
+                        viewModel.account.openEmailVerificationFlow(onFinish = { isSuccess, error ->
+                            navController.navigate(MainRoute.VerifyEmailResult)
+                        })
+                    }
                 }
             )
         }
@@ -343,11 +350,14 @@ fun SelfDemoApp(
         composable<MainRoute.VerifyDocumentStart> {
             VerifyDocumentStartScreen(
                 onStartVerification = {
-                    viewModel.account.openDocumentVerificationFlow(isDevMode = false,
-                        onFinish = { isSuccess, error ->
-                            navController.navigate(MainRoute.VerifyDocumentResult)
-                        }
-                    )
+                    coroutineScope.launch {
+                        viewModel.account.openDocumentVerificationFlow(
+                            isDevMode = false,
+                            onFinish = { isSuccess, error ->
+                                navController.navigate(MainRoute.VerifyDocumentResult)
+                            }
+                        )
+                    }
                 }
             )
         }
@@ -374,7 +384,7 @@ fun SelfDemoApp(
                     properties = DialogProperties(dismissOnBackPress = false, dismissOnClickOutside = false, usePlatformDefaultWidth = false),
                 ) {
                     Box(
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = Modifier.fillMaxSize().padding(top = 100.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         when(request) {
@@ -457,8 +467,7 @@ fun SelfDemoApp(
                     ),
                 ) {
                     Box(
-                        modifier = Modifier
-                            .fillMaxSize(),
+                        modifier = Modifier.fillMaxSize().padding(top = 100.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         when(request) {
@@ -516,7 +525,7 @@ fun SelfDemoApp(
                     properties = DialogProperties(dismissOnBackPress = false, dismissOnClickOutside = false, usePlatformDefaultWidth = false),
                 ) {
                     Box(
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = Modifier.fillMaxSize().padding(top = 100.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         when(request) {
