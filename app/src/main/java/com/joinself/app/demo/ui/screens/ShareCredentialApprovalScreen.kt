@@ -118,24 +118,24 @@ fun ShareCredentialApprovalScreen(
         }
 
         // Fixed action buttons at bottom
-        Column(
-            modifier = Modifier
-                .background(Color.White)
-                .padding(AppSpacing.screenPadding),
-            verticalArrangement = Arrangement.spacedBy(AppSpacing.componentSpacing)
-        ) {
-            PrimaryButton(
-                title = "Approve",
-                isDisabled = requestState !is ServerRequestState.RequestReceived,
-                onClick = onApprove
-            )
-            
-            SecondaryButton(
-                title = "Reject",
-                isDisabled = requestState !is ServerRequestState.RequestReceived,
-                onClick = onDeny
-            )
-        }
+//        Column(
+//            modifier = Modifier
+//                .background(Color.White)
+//                .padding(AppSpacing.screenPadding),
+//            verticalArrangement = Arrangement.spacedBy(AppSpacing.componentSpacing)
+//        ) {
+//            PrimaryButton(
+//                title = "Approve",
+//                isDisabled = requestState !is ServerRequestState.RequestReceived,
+//                onClick = onApprove
+//            )
+//
+//            SecondaryButton(
+//                title = "Reject",
+//                isDisabled = requestState !is ServerRequestState.RequestReceived,
+//                onClick = onDeny
+//            )
+//        }
     }
 }
 

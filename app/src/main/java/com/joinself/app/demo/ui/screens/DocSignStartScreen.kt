@@ -76,24 +76,24 @@ fun DocSignStartScreen(
         }
 
         // Fixed Action Buttons at Bottom
-        Column(
-            modifier = Modifier
-                .background(Color.White)
-                .padding(AppSpacing.screenPadding),
-            verticalArrangement = Arrangement.spacedBy(AppSpacing.componentSpacing)
-        ) {
-            PrimaryButton(
-                title = "Approve",
-                isDisabled = requestState !is ServerRequestState.RequestReceived,
-                onClick = onSign
-            )
-            
-            SecondaryButton(
-                title = "Reject",
-                isDisabled = requestState !is ServerRequestState.RequestReceived,
-                onClick = onReject
-            )
-        }
+//        Column(
+//            modifier = Modifier
+//                .background(Color.White)
+//                .padding(AppSpacing.screenPadding),
+//            verticalArrangement = Arrangement.spacedBy(AppSpacing.componentSpacing)
+//        ) {
+//            PrimaryButton(
+//                title = "Approve",
+//                isDisabled = requestState !is ServerRequestState.RequestReceived,
+//                onClick = onSign
+//            )
+//
+//            SecondaryButton(
+//                title = "Reject",
+//                isDisabled = requestState !is ServerRequestState.RequestReceived,
+//                onClick = onReject
+//            )
+//        }
     }
 }
 
