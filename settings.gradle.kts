@@ -13,13 +13,7 @@ pluginManagement {
 }
 dependencyResolutionManagement {
     repositories {
-        maven {
-            name = "Central Portal Snapshots"
-            url = uri("https://central.sonatype.com/repository/maven-snapshots/")
-            content {
-                includeGroup("com.joinself")
-            }
-        }
+        maven { url = uri("https://central.sonatype.com/repository/maven-snapshots/") }
         google()
         mavenCentral()
     }
