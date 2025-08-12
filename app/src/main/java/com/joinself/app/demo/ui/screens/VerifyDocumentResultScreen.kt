@@ -1,20 +1,24 @@
 package com.joinself.app.demo.ui.screens
-import com.joinself.app.demo.ui.theme.*
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Error
-import androidx.compose.material.icons.filled.Badge
-import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Verified
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
+import com.joinself.app.demo.ui.theme.AlertType
+import com.joinself.app.demo.ui.theme.AppSpacing
+import com.joinself.app.demo.ui.theme.HeroSection
+import com.joinself.app.demo.ui.theme.InfoCard
+import com.joinself.app.demo.ui.theme.PrimaryButton
 
 @Composable
 fun VerifyDocumentResultScreen(
@@ -56,37 +60,6 @@ fun VerifyDocumentResultScreen(
                         type = AlertType.Success
                     )
                 }
-
-//                item {
-//                    // What happens next
-//                    Column(
-//                        verticalArrangement = Arrangement.spacedBy(AppSpacing.componentSpacing)
-//                    ) {
-//                        androidx.compose.material3.Text(
-//                            text = "What You Can Do Now",
-//                            style = AppFonts.heading,
-//                            color = AppColors.textPrimary
-//                        )
-//
-//                        FeatureRow(
-//                            icon = Icons.Filled.Security,
-//                            title = "Share Your Credentials",
-//                            description = "Use your verified credentials to authenticate with services"
-//                        )
-//
-//                        FeatureRow(
-//                            icon = Icons.Filled.Badge,
-//                            title = "Prove Your Identity",
-//                            description = "Your verified document can be used as proof of identity"
-//                        )
-//
-//                        FeatureRow(
-//                            icon = Icons.Filled.CheckCircle,
-//                            title = "Access Protected Services",
-//                            description = "Many services accept verified credentials for enhanced security"
-//                        )
-//                    }
-//                }
             } else {
                 item {
                     // Error information
@@ -97,55 +70,9 @@ fun VerifyDocumentResultScreen(
                         type = AlertType.Error
                     )
                 }
-
-//                item {
-//                    // Troubleshooting tips
-//                    Column(
-//                        verticalArrangement = Arrangement.spacedBy(AppSpacing.componentSpacing)
-//                    ) {
-//                        androidx.compose.material3.Text(
-//                            text = "Troubleshooting Tips",
-//                            style = AppFonts.heading,
-//                            color = AppColors.textPrimary
-//                        )
-//
-//                        FeatureRow(
-//                            icon = Icons.Filled.CheckCircle,
-//                            title = "Check Image Quality",
-//                            description = "Ensure photos are clear, well-lit, and all text is readable"
-//                        )
-//
-//                        FeatureRow(
-//                            icon = Icons.Filled.Badge,
-//                            title = "Verify Document Type",
-//                            description = "Make sure your document type is supported by the verification system"
-//                        )
-//
-//                        FeatureRow(
-//                            icon = Icons.Filled.Security,
-//                            title = "Document Condition",
-//                            description = "Ensure your document is not damaged, expired, or tampered with"
-//                        )
-//                    }
-//                }
             }
-
-//            item {
-//                // Additional information
-//                StatusCard(
-//                    title = "Document Verification",
-//                    status = if (isSuccess) "Completed Successfully" else "Failed",
-//                    statusColor = if (isSuccess) AppColors.success else AppColors.error,
-//                    subtitle = if (isSuccess)
-//                        "Your credential is now available for use"
-//                    else
-//                        "You can try the verification process again",
-//                    icon = if (isSuccess) Icons.Filled.CheckCircle else Icons.Filled.Error
-//                )
-//            }
         }
 
-        // Fixed Primary Button at Bottom
         Column(
             modifier = Modifier
                 .background(Color.White)
@@ -159,7 +86,7 @@ fun VerifyDocumentResultScreen(
     }
 }
 
-@Preview(showBackground = true, name = "Verify Document Result - Success")
+@Preview(showBackground = true, name = "Success")
 @Composable
 fun VerifyDocumentResultScreenSuccessPreview() {
     VerifyDocumentResultScreen(
@@ -168,7 +95,7 @@ fun VerifyDocumentResultScreenSuccessPreview() {
     )
 }
 
-@Preview(showBackground = true, name = "Verify Document Result - Failure")
+@Preview(showBackground = true, name = "Failure")
 @Composable
 fun VerifyDocumentResultScreenFailurePreview() {
     VerifyDocumentResultScreen(
