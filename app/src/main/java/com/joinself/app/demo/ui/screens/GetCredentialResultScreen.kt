@@ -17,6 +17,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
+import com.joinself.app.demo.ServerRequestState
 import com.joinself.app.demo.ui.theme.AlertCard
 import com.joinself.app.demo.ui.theme.AlertType
 import com.joinself.app.demo.ui.theme.AppColors
@@ -27,17 +28,19 @@ import com.joinself.app.demo.ui.theme.InfoCard
 import com.joinself.app.demo.ui.theme.PrimaryButton
 import com.joinself.app.demo.ui.theme.ProcessStep
 import com.joinself.app.demo.ui.theme.SecondaryButton
-
+import com.joinself.sdk.models.ResponseStatus
 
 
 @Composable
 fun GetCredentialResultScreen(
-    isSuccess: Boolean = true,
+    requestState: ServerRequestState,
     credentialName: String = "Custom Credential",
     onContinue: () -> Unit, // Navigate to next screen (e.g., wallet, home)
     onRetry: (() -> Unit)? = null, // Optional: To retry the credential issuance
     modifier: Modifier = Modifier
 ) {
+    val isSuccess = requestState is ServerRequestState.ResponseSent && requestState.status == ResponseStatus.accepted
+
     val heroIcon = if (isSuccess) Icons.Filled.AssignmentTurnedIn else Icons.Filled.Error
     val heroTitle = if (isSuccess) "Get $credentialName Success" else "Get $credentialName Failure"
     val successMessage = "Your $credentialName has been delivered and stored on your device."
@@ -88,46 +91,6 @@ fun GetCredentialResultScreen(
                     )
                 }
             }
-
-            // Optional: Further details or actions
-//            if (isSuccess) {
-//                item {
-//                    Column(verticalArrangement = Arrangement.spacedBy(AppSpacing.componentSpacing)) {
-//                        Text(
-//                            text = "Next Steps",
-//                            style = AppFonts.heading,
-//                            color = AppColors.textPrimary
-//                        )
-//                        ProcessStep( // Assuming ProcessStep is a reusable Composable
-//                            number = 1,
-//                            title = "View Your Credential",
-//                            description = "You can find your new $credentialName in your digital wallet or credentials list."
-//                        )
-//                    }
-//                }
-//            } else { // Failure Case
-//                item {
-//                    Column(verticalArrangement = Arrangement.spacedBy(AppSpacing.componentSpacing)) {
-//                        Text(
-//                            text = "Troubleshooting",
-//                            style = AppFonts.heading,
-//                            color = AppColors.textPrimary
-//                        )
-//                        ProcessStep(
-//                            number = 1,
-//                            title = "Check Network",
-//                            description = "Ensure you have a stable internet connection."
-//                        )
-//                        if (onRetry != null) {
-//                            ProcessStep(
-//                                number = 2,
-//                                title = "Try Again",
-//                                description = "You can attempt to get your $credentialName again."
-//                            )
-//                        }
-//                    }
-//                }
-//            }
         }
 
         // Fixed Buttons at Bottom
@@ -139,7 +102,7 @@ fun GetCredentialResultScreen(
             verticalArrangement = Arrangement.spacedBy(AppSpacing.componentSpacing)
         ) {
             PrimaryButton(
-                title = if (isSuccess) "Continue" else "Continue", // Or "View Wallet", "Close"
+                title = "Continue", // Or "View Wallet", "Close"
                 onClick = onContinue
             )
 //            if (!isSuccess && onRetry != null) {
@@ -157,7 +120,7 @@ fun GetCredentialResultScreen(
 fun GetCredentialResultScreenSuccessPreview() {
     // YourAppTheme {
     GetCredentialResultScreen(
-        isSuccess = true,
+        requestState = ServerRequestState.ResponseSent(ResponseStatus.accepted),
         credentialName = "Custom Credential",
         onContinue = {}
     )
@@ -169,7 +132,7 @@ fun GetCredentialResultScreenSuccessPreview() {
 fun GetCredentialResultScreenFailurePreview() {
     // YourAppTheme {
     GetCredentialResultScreen(
-        isSuccess = false,
+        requestState = ServerRequestState.ResponseSent(ResponseStatus.rejected),
         credentialName = "Proof of Age",
         onContinue = {},
         onRetry = {}
@@ -182,7 +145,7 @@ fun GetCredentialResultScreenFailurePreview() {
 fun GetCredentialResultScreenFailureNoRetryPreview() {
     // YourAppTheme {
     GetCredentialResultScreen(
-        isSuccess = false,
+        requestState = ServerRequestState.RequestError("error"),
         credentialName = "Access Pass",
         onContinue = {}
         // onRetry is null
