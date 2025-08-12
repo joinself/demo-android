@@ -55,8 +55,8 @@ fun GetCredentialResultScreen(
                     } else {
                         HeroSection(
                             icon = Icons.Filled.Error,
-                            title = "Get $credentialName Failure",
-                            subtitle = "Your $credentialName has not been delivered. Please try again."
+                            title = "Get $credentialName Rejected",
+                            subtitle = "Your $credentialName has not been stored. Please try again."
                         )
                     }
                 } else {
@@ -80,8 +80,8 @@ fun GetCredentialResultScreen(
                     } else {
                         InfoCard(
                             icon = Icons.Filled.VerifiedUser, // Or specific success icon
-                            title = "Credential Not Delivered",
-                            message = "We couldn't generate and sign your $credentialName at this time. Please check your connection or try again.",
+                            title = "Credential Not Stored",
+                            message = "We couldn't store your $credentialName at this time. Please try again.",
                             type = AlertType.Error
                         )
                     }
