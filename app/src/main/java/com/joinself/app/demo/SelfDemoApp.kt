@@ -411,7 +411,7 @@ fun SelfDemoApp(
         }
         composable<MainRoute.GetCustomCredentialResult> {
             GetCredentialResultScreen(
-                isSuccess = true,
+                requestState = appState.requestState,
                 credentialName = "Custom Credentials",
                 onContinue = {
                     navController.popBackStack(MainRoute.ServerConnectionReady, inclusive = false)

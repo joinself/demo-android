@@ -64,38 +64,6 @@ fun GetCredentialStartScreen(
                     type = AlertType.Info
                 )
             }
-
-//            item {
-//                // More details about what will happen or benefits
-//                // This is similar to the "Email Verification Required" InfoCard in VerifyEmailStartScreen
-//                // but adapted for credentials
-//                InfoCard(
-//                    icon = Icons.Filled.Security,
-//                    title = "What to Expect",
-//                    message = "The process is quick and secure. Once initiated, the server will prepare your $credentialName. No complex steps are required from your side during generation.",
-//                    type = AlertType.Info // Or AlertType.Success if it's more of a benefit
-//                )
-//            }
-
-//             item {
-//                 Column(verticalArrangement = Arrangement.spacedBy(AppSpacing.componentSpacing)) {
-//                     Text(
-//                         text = "Benefits",
-//                         style = AppFonts.heading,
-//                         color = AppColors.textPrimary
-//                     )
-//                     FeatureRow(
-//                         icon = Icons.Filled.Verified,
-//                         title = "Authentic & Verified",
-//                         description = "Receive a credential that is verifiably authentic."
-//                     )
-//                     FeatureRow(
-//                         icon = Icons.Filled.Security,
-//                         title = "Securely Delivered",
-//                         description = "Your credential is created and delivered through a secure channel."
-//                     )
-//                 }
-//             }
         }
 
         // Fixed Primary Button at Bottom

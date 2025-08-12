@@ -37,11 +37,19 @@ fun AuthRequestResultScreen(
             item {
                 // Hero Section - Success or Failure
                 if (requestState is ServerRequestState.ResponseSent) {
-                    HeroSection(
-                        icon = Icons.Filled.CheckCircle,
-                        title = "Authentication Successful",
-                        subtitle = "Your identity has been verified successfully. Your biometric credentials were validated by the server."
-                    )
+                    if (requestState.status == ResponseStatus.accepted) {
+                        HeroSection(
+                            icon = Icons.Filled.CheckCircle,
+                            title = "Authentication Successful",
+                            subtitle = "Your identity has been verified successfully. Your biometric credentials were validated by the server."
+                        )
+                    } else {
+                        HeroSection(
+                            icon = Icons.Filled.Error,
+                            title = "Authentication Rejected",
+                            subtitle = "Your identity has been rejected successfully. Your biometric credentials were not verified by the server."
+                        )
+                    }
                 } else {
                     HeroSection(
                         icon = Icons.Filled.Error,
@@ -54,12 +62,21 @@ fun AuthRequestResultScreen(
             item {
                 // Result details
                 if (requestState is ServerRequestState.ResponseSent) {
-                    InfoCard(
-                        icon = Icons.Filled.Verified,
-                        title = "Identity Verified",
-                        message = "Your liveness check was completed successfully and your credentials have been validated by the server. You can now continue with other actions.",
-                        type = AlertType.Success
-                    )
+                    if (requestState.status == ResponseStatus.accepted) {
+                        InfoCard(
+                            icon = Icons.Filled.Verified,
+                            title = "Identity Verified",
+                            message = "Your liveness check was completed successfully and your credentials have been validated by the server.\nYou can now continue with other actions.",
+                            type = AlertType.Success
+                        )
+                    } else {
+                        InfoCard(
+                            icon = Icons.Filled.Verified,
+                            title = "Identity Rejected",
+                            message = "Your liveness check was rejected successfully and your credentials have not been validated by the server.\nYou can now continue with other actions.",
+                            type = AlertType.Success
+                        )
+                    }
                 } else {
                     AlertCard(
                         title = "Verification Failed",
@@ -68,95 +85,6 @@ fun AuthRequestResultScreen(
                     )
                 }
             }
-
-//            if (requestState is ServerRequestState.ResponseSent) {
-//                item {
-//                    // What happened during authentication
-//                    Column(
-//                        verticalArrangement = Arrangement.spacedBy(AppSpacing.componentSpacing)
-//                    ) {
-//                        androidx.compose.material3.Text(
-//                            text = "Authentication Details",
-//                            style = AppFonts.heading,
-//                            color = AppColors.textPrimary
-//                        )
-//
-//                        ProcessStep(
-//                            number = 1,
-//                            title = "Liveness Check Completed",
-//                            description = "Biometric verification was successful"
-//                        )
-//
-//                        ProcessStep(
-//                            number = 2,
-//                            title = "Credentials Generated",
-//                            description = "Secure credentials were created from your biometric data"
-//                        )
-//
-//                        ProcessStep(
-//                            number = 3,
-//                            title = "Server Validation",
-//                            description = "Your credentials were verified by the server"
-//                        )
-//                    }
-//                }
-//
-//                item {
-//                    // Security confirmation
-//                    Column(
-//                        verticalArrangement = Arrangement.spacedBy(AppSpacing.componentSpacing)
-//                    ) {
-//                        androidx.compose.material3.Text(
-//                            text = "Security Confirmation",
-//                            style = AppFonts.heading,
-//                            color = AppColors.textPrimary
-//                        )
-//
-//                        FeatureRow(
-//                            icon = Icons.Filled.Security,
-//                            title = "Data Privacy Maintained",
-//                            description = "Your biometric data remained on your device throughout the process"
-//                        )
-//
-//                        FeatureRow(
-//                            icon = Icons.Filled.CheckCircle,
-//                            title = "Secure Transmission",
-//                            description = "All credentials were transmitted using end-to-end encryption"
-//                        )
-//                    }
-//                }
-//            } else {
-//                item {
-//                    // Troubleshooting for failed authentication
-//                    Column(
-//                        verticalArrangement = Arrangement.spacedBy(AppSpacing.componentSpacing)
-//                    ) {
-//                        androidx.compose.material3.Text(
-//                            text = "Troubleshooting",
-//                            style = AppFonts.heading,
-//                            color = AppColors.textPrimary
-//                        )
-//
-//                        ProcessStep(
-//                            number = 1,
-//                            title = "Check Lighting",
-//                            description = "Ensure you're in a well-lit area for the camera"
-//                        )
-//
-//                        ProcessStep(
-//                            number = 2,
-//                            title = "Camera Position",
-//                            description = "Hold your device at eye level and look directly at the camera"
-//                        )
-//
-//                        ProcessStep(
-//                            number = 3,
-//                            title = "Network Connection",
-//                            description = "Verify you have a stable internet connection"
-//                        )
-//                    }
-//                }
-//            }
         }
 
         // Fixed Primary Button at Bottom
@@ -173,7 +101,7 @@ fun AuthRequestResultScreen(
     }
 }
 
-@Preview(showBackground = true, name = "Auth Request Result - Success")
+@Preview(showBackground = true, name = "Success")
 @Composable
 fun AuthRequestResultScreenSuccessPreview() {
     AuthRequestResultScreen(
@@ -182,7 +110,16 @@ fun AuthRequestResultScreenSuccessPreview() {
     )
 }
 
-@Preview(showBackground = true, name = "Auth Request Result - Failure")
+@Preview(showBackground = true, name = "Rejected")
+@Composable
+fun AuthRequestResultScreenRejectedPreview() {
+    AuthRequestResultScreen(
+        requestState = ServerRequestState.ResponseSent(ResponseStatus.rejected),
+        onContinue = {}
+    )
+}
+
+@Preview(showBackground = true, name = "Failure")
 @Composable
 fun AuthRequestResultScreenFailurePreview() {
     AuthRequestResultScreen(
