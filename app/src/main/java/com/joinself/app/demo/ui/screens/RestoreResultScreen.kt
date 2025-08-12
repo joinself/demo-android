@@ -13,7 +13,6 @@ import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.SecurityUpdateGood
 import androidx.compose.material.icons.filled.SyncProblem
 import androidx.compose.material.icons.filled.VerifiedUser
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -21,14 +20,10 @@ import androidx.compose.ui.tooling.preview.Preview
 import com.joinself.app.demo.BackupRestoreState
 import com.joinself.app.demo.ui.theme.AlertCard
 import com.joinself.app.demo.ui.theme.AlertType
-import com.joinself.app.demo.ui.theme.AppColors
-import com.joinself.app.demo.ui.theme.AppFonts
 import com.joinself.app.demo.ui.theme.AppSpacing
 import com.joinself.app.demo.ui.theme.HeroSection
 import com.joinself.app.demo.ui.theme.InfoCard
 import com.joinself.app.demo.ui.theme.PrimaryButton
-import com.joinself.app.demo.ui.theme.ProcessStep
-import com.joinself.app.demo.ui.theme.SecondaryButton
 
 @Composable
 fun RestoreResultScreen(
@@ -116,34 +111,6 @@ fun RestoreResultScreen(
                     )
                 }
             }
-
-            // Optional: Further details or steps based on the outcome
-//            if (!isSuccess) {
-//                item {
-//                    Column(
-//                        verticalArrangement = Arrangement.spacedBy(AppSpacing.componentSpacing)
-//                    ) {
-//                        Text(
-//                            text = "Next Steps",
-//                            style = AppFonts.heading,
-//                            color = AppColors.textPrimary
-//                        )
-//                        if (restoreState == BackupRestoreState.VerificationFailed && onRetry != null) {
-//                            ProcessStep(
-//                                number = 1,
-//                                title = "Retry Identity Verification",
-//                                description = "You can attempt the liveness and selfie check again."
-//                            )
-//                        }
-//                        ProcessStep(
-//                            number = 2,
-//                            title = "Check Connection",
-//                            description = "Ensure you have a stable internet connection."
-//                        )
-//                        // Add more troubleshooting or guidance steps here
-//                    }
-//                }
-//            }
         }
 
         // Fixed Buttons at Bottom
