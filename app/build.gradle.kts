@@ -30,7 +30,7 @@ android {
     defaultConfig {
         applicationId = "com.joinself.app.demo"
         minSdk = 28
-        targetSdk = 35
+        targetSdk = 36
         versionCode = androidGitVersion.code()
         versionName = androidGitVersion.name()
 
@@ -74,7 +74,6 @@ android {
     packaging {
         jniLibs {
             pickFirsts.addAll(listOf("lib/x86/libc++_shared.so", "lib/x86_64/libc++_shared.so", "lib/armeabi-v7a/libc++_shared.so", "lib/arm64-v8a/libc++_shared.so"))
-            useLegacyPackaging = true
         }
         resources {
             excludes.addAll(listOf("META-INF/NOTICE", "META-INF/LICENSE", "META-INF/DEPENDENCIES", "META-INF/versions/9/OSGI-INF/MANIFEST.MF"))
