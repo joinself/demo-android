@@ -1,5 +1,6 @@
 package com.joinself.app.demo
 
+import android.content.Intent
 import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.EnterTransition
@@ -21,6 +22,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.core.content.FileProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -70,6 +72,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
+import java.io.File
 
 
 private const val TAG = "SelfSDKDemoApp"
@@ -119,6 +122,19 @@ fun SelfDemoApp(
     val appState by viewModel.appStateFlow.collectAsState()
 
     var credentialType by remember { mutableStateOf("") }
+
+    fun shareLogfile() {
+        val logPath = context.cacheDir.absolutePath + "/file0.log"
+        val logFile = File(logPath)
+        if (!logFile.exists()) return
+
+        val uri = FileProvider.getUriForFile(context, context.packageName + ".file_provider", logFile)
+        val intent = Intent(Intent.ACTION_SEND)
+        intent.type = "text/*"
+        intent.putExtra(Intent.EXTRA_STREAM, uri)
+        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        context.startActivity(Intent.createChooser(intent, "Share log with"))
+    }
 
     NavHost(
         navController = navController,
@@ -245,6 +261,9 @@ fun SelfDemoApp(
                 },
                 onConnectToServer = {
                     navController.navigate(MainRoute.ConnectToServerSelection)
+                },
+                onShareLog = {
+                    shareLogfile()
                 }
             )
             LaunchedEffect(Unit) {

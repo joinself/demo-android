@@ -23,6 +23,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import timber.log.Timber
 import java.io.File
 
 private const val TAG = "MainViewModel"
@@ -92,7 +93,7 @@ class MainViewModel(context: Context): ViewModel() {
         SelfSDK.initialize(
             context,
             pushToken = null,
-            log = { Log.d("SelfSDK", it) }
+            log = { Timber.tag("SelfSDK").d(it) }
         )
 
         // the sdk will store data in this directory, make sure it exists.
@@ -106,7 +107,7 @@ class MainViewModel(context: Context): ViewModel() {
             .setStoragePath(storagePath.absolutePath)
             .setCallbacks(object : Account.Callbacks {
                 override fun onMessage(message: Message) {
-                    Log.d("Self", "onMessage: ${message.id()}")
+                    Timber.tag("DemoApp").d("onMessage: ${message.id()}")
 
                     when (message) {
                         is CredentialMessage -> {
@@ -129,7 +130,7 @@ class MainViewModel(context: Context): ViewModel() {
                     cancelRequestTimeout()
                 }
                 override fun onConnect() {
-                    Log.d("Self", "onConnect")
+                    Timber.tag("DemoApp").d("onConnect")
                     _appUiState.update {
                         it.copy(
                             initialization = InitializationState.Success
@@ -137,13 +138,13 @@ class MainViewModel(context: Context): ViewModel() {
                     }
                 }
                 override fun onDisconnect(errorMessage: String?) {
-                    Log.d("Self", "onDisconnect: $errorMessage")
+                    Timber.tag("DemoApp").d("onDisconnect: $errorMessage")
                 }
                 override fun onAcknowledgement(id: String) {
-                    Log.d("Self", "onAcknowledgement: $id")
+                    Timber.tag("DemoApp").d("onAcknowledgement: $id")
                 }
                 override fun onError(id: String, errorMessage: String?) {
-                    Log.d("Self", "onError: $errorMessage")
+                    Timber.tag("DemoApp").d("onError: $errorMessage")
                 }
             })
             .build()

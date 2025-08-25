@@ -89,6 +89,7 @@ android {
 }
 
 dependencies {
+    implementation(files("libs/Treessence-1.1.2.aar"))
     implementation(libs.self.sdk.android)
 
     implementation(libs.androidx.core.ktx)
