@@ -174,7 +174,7 @@ class MainViewModel(context: Context): ViewModel() {
                 _appUiState.update { it.copy(serverState = ServerState.Error("failed to connect to server")) }
             }
         } catch (ex: Exception) {
-            Log.e(TAG, ex.message, ex)
+            Timber.e(ex)
             _appUiState.update { it.copy(serverState = ServerState.Error(ex.message ?: "failed to connect to server")) }
         }
     }
@@ -190,14 +190,14 @@ class MainViewModel(context: Context): ViewModel() {
                 _appUiState.update { it.copy(serverState = ServerState.Error("failed to connect to server")) }
             }
         } catch (ex: Exception) {
-            Log.e(TAG, ex.message, ex)
+            Timber.e(ex)
             _appUiState.update { it.copy(serverState = ServerState.Error(ex.message ?: "failed to connect to server")) }
         }
     }
 
     // reset local variables and states
     fun resetState(requestState: ServerRequestState) {
-        Log.d(TAG, "reset states")
+        Timber.tag(TAG).d("reset states")
         _appUiState.update { it.copy(requestState = requestState) }
         credentialRequest = null
         verificationRequest = null

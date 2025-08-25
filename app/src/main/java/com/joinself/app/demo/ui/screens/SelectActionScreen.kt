@@ -149,6 +149,7 @@ fun SelectActionScreen(
                 text = { Text("Share log") },
                 onClick = {
                     expanded = false
+                    onShareLog.invoke()
                 }
             )
         }
