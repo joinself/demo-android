@@ -10,6 +10,7 @@ activityCompose = "1.10.1"
 navigationCompose = "2.9.3"
 composeBom = "2025.08.00"
 gradleAndroidGitVersion = "0.4.14"
+timber = "5.0.1"
 sdkAndroid = "1.3.0-15-SNAPSHOT"
 
 [libraries]
@@ -33,6 +34,7 @@ self-sdk-android = { group = "com.joinself", name="sdk-android", version.ref = "
 gradle-build-tool = { module = "com.android.tools.build:gradle", version.ref = "agp" }
 gradle-kotlin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
 gradle-git-version = { module = "com.gladed.androidgitversion:gradle-android-git-version", version.ref = "gradleAndroidGitVersion" }
+timber = { module = "com.jakewharton.timber:timber", version.ref = "timber" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

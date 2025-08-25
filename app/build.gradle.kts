@@ -89,6 +89,7 @@ android {
 }
 
 dependencies {
+    implementation(files("libs/Treessence-1.1.2.aar"))
     implementation(libs.self.sdk.android)
 
     implementation(libs.androidx.core.ktx)
@@ -101,6 +102,7 @@ dependencies {
     implementation(libs.androidx.material3)
     implementation(libs.androidx.material.icons.extended)
     implementation(libs.androidx.compose.navigation)
+    implementation(libs.timber)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

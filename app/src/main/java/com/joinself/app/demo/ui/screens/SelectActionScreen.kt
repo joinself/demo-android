@@ -18,13 +18,24 @@ import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.CloudQueue
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Fingerprint
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.VerifiedUser
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import com.joinself.app.demo.ui.theme.AppColors
 import com.joinself.app.demo.ui.theme.AppFonts
@@ -38,10 +49,12 @@ fun SelectActionScreen(
     onProvideCredentials: () -> Unit,
     onSignDocuments: () -> Unit,
     onBackup: () -> Unit,
+    onShareLog: () -> Unit,
     onConnectToServer: () -> Unit,
     modifier: Modifier = Modifier,
     isAuthenticating: Boolean = false
 ) {
+    var expanded by remember { mutableStateOf(false) }
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -114,7 +127,34 @@ fun SelectActionScreen(
             }
         }
     }
-    
+
+    Box(
+        modifier = Modifier.fillMaxWidth(),
+        contentAlignment = Alignment.TopEnd
+    ) {
+        IconButton(onClick = { expanded = true }) {
+            Icon(
+                imageVector = Icons.Default.MoreVert,
+                contentDescription = "Menu"
+            )
+        }
+
+        DropdownMenu(
+            modifier = Modifier.align(Alignment.TopEnd),
+            expanded = expanded,
+            offset = DpOffset(x = (-4).dp, y = 0.dp),
+            onDismissRequest = { expanded = false }
+        ) {
+            DropdownMenuItem(
+                text = { Text("Share log") },
+                onClick = {
+                    expanded = false
+                    onShareLog.invoke()
+                }
+            )
+        }
+    }
+
     // Full-screen overlay with spinner when authenticating
     if (isAuthenticating) {
         Box(
@@ -142,6 +182,7 @@ fun SelectActionScreenPreview() {
         onSignDocuments = {},
         onBackup = {},
         onConnectToServer = {},
+        onShareLog = {},
         isAuthenticating = false
     )
 }
