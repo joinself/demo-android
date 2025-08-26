@@ -70,6 +70,7 @@ sealed class SERVER_REQUESTS {
 // the main states of the app
 data class AppUiState(
     var isRegistered: Boolean = false,
+    var verificationStatus: Boolean = false,
     var initialization: InitializationState = InitializationState.Loading,
     var serverState: ServerState = ServerState.None,
     var requestState: ServerRequestState = ServerRequestState.None,
@@ -196,9 +197,9 @@ class MainViewModel(context: Context): ViewModel() {
     }
 
     // reset local variables and states
-    fun resetState(requestState: ServerRequestState) {
-        Timber.tag(TAG).d("reset states")
-        _appUiState.update { it.copy(requestState = requestState) }
+    fun resetState(requestState: ServerRequestState = ServerRequestState.None, verificationStatus: Boolean? = null) {
+        Timber.tag(TAG).d("reset states to $requestState and $verificationStatus")
+        _appUiState.update { it.copy(requestState = requestState, verificationStatus = verificationStatus ?: false) }
         credentialRequest = null
         verificationRequest = null
     }

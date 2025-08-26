@@ -72,6 +72,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
+import timber.log.Timber
 import java.io.File
 
 
@@ -306,7 +307,7 @@ fun SelfDemoApp(
                 }
             }
             LaunchedEffect(appState.requestState) {
-                Log.d(TAG, "auth request state: ${appState.requestState}")
+                Timber.tag(TAG).d("auth request state: ${appState.requestState}")
                 when (appState.requestState) {
                     is ServerRequestState.None -> {
                         withContext(Dispatchers.IO){
@@ -352,6 +353,7 @@ fun SelfDemoApp(
                 onStartVerification = {
                     coroutineScope.launch {
                         viewModel.account.openEmailVerificationFlow(onFinish = { isSuccess, error ->
+                            viewModel.resetState(verificationStatus = isSuccess)
                             navController.navigate(MainRoute.VerifyEmailResult)
                         })
                     }
@@ -360,7 +362,7 @@ fun SelfDemoApp(
         }
         composable<MainRoute.VerifyEmailResult> {
             VerifyEmailResultScreen(
-                isSuccess = true,
+                isSuccess = appState.verificationStatus,
                 onContinue = {
                     navController.popBackStack(MainRoute.ServerConnectionReady, inclusive = false)
                 }
@@ -373,6 +375,7 @@ fun SelfDemoApp(
                         viewModel.account.openDocumentVerificationFlow(
                             isDevMode = false,
                             onFinish = { isSuccess, error ->
+                                viewModel.resetState(verificationStatus = isSuccess)
                                 navController.navigate(MainRoute.VerifyDocumentResult)
                             }
                         )
@@ -382,7 +385,7 @@ fun SelfDemoApp(
         }
         composable<MainRoute.VerifyDocumentResult> {
             VerifyDocumentResultScreen(
-                isSuccess = true,
+                isSuccess = appState.verificationStatus,
                 onContinue = {
                     navController.popBackStack(MainRoute.ServerConnectionReady, inclusive = false)
                 }
@@ -417,7 +420,7 @@ fun SelfDemoApp(
                 }
             }
             LaunchedEffect(appState.requestState) {
-                Log.d(TAG, "custom credential state: ${appState.requestState}")
+                Timber.tag(TAG).d("custom credential state: ${appState.requestState}")
                 when (appState.requestState) {
                     is ServerRequestState.ResponseSent, is ServerRequestState.RequestError -> {
                         withContext(Dispatchers.Main){
@@ -500,7 +503,7 @@ fun SelfDemoApp(
                 }
             }
             LaunchedEffect(appState.requestState) {
-                Log.d(TAG, "credential request state: ${appState.requestState}")
+                Timber.tag(TAG).d("credential request state: ${appState.requestState}")
                 when (appState.requestState) {
                     is ServerRequestState.None -> {
                         withContext(Dispatchers.IO) {
@@ -558,7 +561,7 @@ fun SelfDemoApp(
                 }
             }
             LaunchedEffect(appState.requestState) {
-                Log.d(TAG, "docsign request state: ${appState.requestState}")
+                Timber.tag(TAG).d("docsign request state: ${appState.requestState}")
                 when (appState.requestState) {
                     is ServerRequestState.None -> {
                         withContext(Dispatchers.IO){
@@ -650,10 +653,10 @@ fun SelfDemoApp(
     }
 
     LaunchedEffect(Unit) {
-        Log.d(TAG, "Version: ${BuildConfig.VERSION_NAME}")
+        Timber.tag(TAG).d("Version: ${BuildConfig.VERSION_NAME}")
     }
     LaunchedEffect(appState.requestState) {
-        Log.d(TAG, "credential request state: ${appState.requestState}")
+        Timber.tag(TAG).d("credential request state: ${appState.requestState}")
         when (appState.requestState) {
             is ServerRequestState.RequestReceived -> {
                 if (navController.currentDestination?.route?.contains(MainRoute.ServerConnectionReady::class.simpleName.toString()) == true) {
