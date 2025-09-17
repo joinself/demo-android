@@ -459,7 +459,7 @@ fun SelfDemoApp(
                     navController.navigate(MainRoute.ShareCredentialApproval)
                 },
                 onBack = {
-
+                    navController.popBackStack()
                 }
             )
             LaunchedEffect(Unit) {
