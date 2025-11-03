@@ -18,7 +18,7 @@ jobs:
       - name: CI
         shell: bash
         env:
-          GH_TOKEN: ${{ secrets.GHA_TOKEN }}
+          GH_TOKEN: ${{ secrets.GH_PAT_DEMO_ANDROID_GHA }}
           WORKFLOW_ID: ${{ github.run_id }}${{github.run_attempt}}
         run: |
           . ${GITHUB_WORKSPACE}/.ci/env
