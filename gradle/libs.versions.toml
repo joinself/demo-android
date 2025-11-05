@@ -11,7 +11,7 @@ navigationCompose = "2.9.5"
 composeBom = "2025.10.01"
 gradleAndroidGitVersion = "0.4.14"
 timber = "5.0.1"
-sdkAndroid = "1.5.0"
+sdkAndroid = "1.7.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
