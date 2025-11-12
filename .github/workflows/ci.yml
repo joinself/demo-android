@@ -26,7 +26,7 @@ jobs:
           workflow="CI"
           gh workflow run "${workflow}" -R joinself/demo-android-gha -r main -f id=${WORKFLOW_ID} -f git-ref=${CI_REF_NAME}
 
-          echo "Calling remote workflow: ${workflow} (${WORKFLOW_ID})"
+          echo "Calling remote workflow: joinself/demo-android-gha - ${workflow} (${WORKFLOW_ID})"
           for ((i = 0; i < 120; i++)); do
             echo "Waiting for workflow to complete..."
             conclusion=$(gh run list -R joinself/demo-android-gha --json name,conclusion --jq ".[] | select(.name==\"${workflow} (${WORKFLOW_ID})\") | .conclusion")
