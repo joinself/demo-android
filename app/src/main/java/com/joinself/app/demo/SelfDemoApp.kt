@@ -5,6 +5,7 @@ import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -27,6 +28,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.joinself.app.demo.ui.screens.ApplicationAddressEnterScreen
 import com.joinself.app.demo.ui.screens.AuthRequestResultScreen
 import com.joinself.app.demo.ui.screens.AuthRequestStartScreen
 import com.joinself.app.demo.ui.screens.BackupResultScreen
@@ -81,6 +83,7 @@ private const val TAG = "SelfSDKDemoApp"
 sealed class MainRoute {
     @Serializable object Initializing
     @Serializable object Registration
+    @Serializable object EnterApplicationAddress
     @Serializable object ConnectToServerSelection
     @Serializable object ConnectToServerAddress
     @Serializable object ConnectingToServer
@@ -155,6 +158,9 @@ fun SelfDemoApp(
 
             LaunchedEffect(appState.initialization) {
                 when (val status = appState.initialization) {
+                    is InitializationState.UnRegistered -> {
+                        navController.navigate(MainRoute.Registration)
+                    }
                     is InitializationState.Success -> {
                         val route = if (viewModel.isRegistered()) MainRoute.ConnectToServerSelection else MainRoute.Registration
                         navController.navigate(route)
@@ -171,17 +177,37 @@ fun SelfDemoApp(
             RegistrationIntroScreen( selfModifier = selfModifier,
                 onStartRegistration = {
                     coroutineScope.launch {
-                        viewModel.account.openRegistrationFlow { isSuccess, error ->
-                            coroutineScope.launch(Dispatchers.Main) {
-                                if (isSuccess) navController.navigate(MainRoute.ConnectToServerSelection)
-                            }
-                        }
+                        navController.navigate(MainRoute.EnterApplicationAddress)
                     }
                 },
                 onStartRestore = {
                     navController.navigate(MainRoute.RestoreStart)
                 },
                 onOpenSettings = onOpenSettings
+            )
+        }
+        composable<MainRoute.EnterApplicationAddress> {
+            ApplicationAddressEnterScreen(
+                onContinue = { address ->
+                    coroutineScope.launch(Dispatchers.IO) {
+                        viewModel.initAccount(
+                            applicationAddress = address,
+                            onConnectCompletion = {
+                                coroutineScope.launch {
+                                    viewModel.account?.openRegistrationFlow { isSuccess, error ->
+                                        if (isSuccess) {
+                                            viewModel.saveApplicationAddress(address)
+
+                                            coroutineScope.launch(Dispatchers.Main) {
+                                                navController.navigate(MainRoute.ConnectToServerSelection)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        )
+                    }
+                }
             )
         }
         composable<MainRoute.ConnectToServerSelection> {
@@ -191,7 +217,7 @@ fun SelfDemoApp(
                 },
                 onQRCode = {
                     coroutineScope.launch {
-                        viewModel.account.openQRCodeFlow(
+                        viewModel.account?.openQRCodeFlow(
                             onFinish = { qrCode, discoveryData ->
                                 if (discoveryData == null || !discoveryData.sandbox) {
                                     return@openQRCodeFlow
@@ -298,7 +324,7 @@ fun SelfDemoApp(
                     ) {
                         when(request) {
                             is CredentialRequest -> {
-                                viewModel.account.DisplayRequestUI(selfModifier, request, onFinish = { isSent, status ->
+                                viewModel.account?.DisplayRequestUI(selfModifier, request, onFinish = { isSent, status ->
                                     viewModel.resetState(requestState = if (isSent) ServerRequestState.ResponseSent(status) else ServerRequestState.RequestError("failed to respond"))
                                 })
                             }
@@ -352,7 +378,7 @@ fun SelfDemoApp(
             VerifyEmailStartScreen(
                 onStartVerification = {
                     coroutineScope.launch {
-                        viewModel.account.openEmailVerificationFlow(onFinish = { isSuccess, error ->
+                        viewModel.account?.openEmailVerificationFlow(onFinish = { isSuccess, error ->
                             viewModel.resetState(verificationStatus = isSuccess)
                             navController.navigate(MainRoute.VerifyEmailResult)
                         })
@@ -372,7 +398,7 @@ fun SelfDemoApp(
             VerifyDocumentStartScreen(
                 onStartVerification = {
                     coroutineScope.launch {
-                        viewModel.account.openDocumentVerificationFlow(
+                        viewModel.account?.openDocumentVerificationFlow(
                             isDevMode = false,
                             onFinish = { isSuccess, error ->
                                 viewModel.resetState(verificationStatus = isSuccess)
@@ -411,7 +437,7 @@ fun SelfDemoApp(
                     ) {
                         when(request) {
                             is CredentialMessage -> {
-                                viewModel.account.DisplayRequestUI(selfModifier, request, onFinish = { isSent, status ->
+                                viewModel.account?.DisplayRequestUI(selfModifier, request, onFinish = { isSent, status ->
                                     viewModel.resetState(requestState = if (isSent) ServerRequestState.ResponseSent(status) else ServerRequestState.RequestError("failed to respond"))
                                 })
                             }
@@ -494,7 +520,7 @@ fun SelfDemoApp(
                     ) {
                         when(request) {
                             is CredentialRequest -> {
-                                viewModel.account.DisplayRequestUI(selfModifier, request, onFinish = { isSent, status ->
+                                viewModel.account?.DisplayRequestUI(selfModifier, request, onFinish = { isSent, status ->
                                     viewModel.resetState(requestState = if (isSent) ServerRequestState.ResponseSent(status) else ServerRequestState.RequestError("failed to respond"))
                                 })
                             }
@@ -552,7 +578,7 @@ fun SelfDemoApp(
                     ) {
                         when(request) {
                             is VerificationRequest -> {
-                                viewModel.account.DisplayRequestUI(selfModifier, request, onFinish = { isSent, status ->
+                                viewModel.account?.DisplayRequestUI(selfModifier, request, onFinish = { isSent, status ->
                                     viewModel.resetState(requestState = if (isSent) ServerRequestState.ResponseSent(status) else ServerRequestState.RequestError("failed to respond"))
                                 })
                             }
@@ -593,7 +619,7 @@ fun SelfDemoApp(
                 backupState = appState.backupRestoreState,
                 onStartBackup = {
                     coroutineScope.launch(Dispatchers.Main) {
-                        viewModel.account.openBackupFlow(onFinish = { isSuccess, error ->
+                        viewModel.account?.openBackupFlow(onFinish = { isSuccess, error ->
                             if (isSuccess) {
                                 viewModel.setBackupRestoreState(state = BackupRestoreState.Success)
                             } else {
@@ -621,7 +647,7 @@ fun SelfDemoApp(
                 restoreState = appState.backupRestoreState,
                 onStartRestore = {
                     coroutineScope.launch(Dispatchers.Main) {
-                        viewModel.account.openRestoreFlow(onFinish = { isSuccess, error ->
+                        viewModel.account?.openRestoreFlow(onFinish = { isSuccess, error ->
                             if (isSuccess) {
                                 viewModel.setBackupRestoreState(state = BackupRestoreState.Success)
                             } else {
