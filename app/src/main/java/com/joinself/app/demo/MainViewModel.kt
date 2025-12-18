@@ -1,7 +1,6 @@
 package com.joinself.app.demo
 
 import android.content.Context
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.joinself.common.CredentialType
@@ -28,8 +27,11 @@ import java.io.File
 
 private const val TAG = "MainViewModel"
 
+private val appAddressKey = "ApplicationAddress"
+
 sealed class InitializationState {
     data object None: ServerState()
+    data object UnRegistered: InitializationState()
     data object Loading: InitializationState()
     data object Success: InitializationState()
     data class  Error(val message: String): InitializationState()
@@ -69,7 +71,7 @@ sealed class SERVER_REQUESTS {
 
 // the main states of the app
 data class AppUiState(
-    var isRegistered: Boolean = false,
+//    var isRegistered: Boolean = false,
     var verificationStatus: Boolean = false,
     var initialization: InitializationState = InitializationState.Loading,
     var serverState: ServerState = ServerState.None,
@@ -77,18 +79,20 @@ data class AppUiState(
     var backupRestoreState: BackupRestoreState = BackupRestoreState.None
 )
 
-class MainViewModel(context: Context): ViewModel() {
+class MainViewModel(val context: Context): ViewModel() {
+
+    private val sharedPreferences = context.getSharedPreferences("SelfDemoPref", Context.MODE_PRIVATE)
+
     private val _appUiState = MutableStateFlow(AppUiState())
     val appStateFlow: StateFlow<AppUiState> = _appUiState.asStateFlow()
 
-    val account: Account
+    var account: Account? = null
     var serverInboxAddress: PublicKey? = null
     private var groupAddress: PublicKey? = null
     private var credentialRequest: CredentialRequest? = null
     private var verificationRequest: VerificationRequest? = null
     private var requestTimeoutJob: Job? = null
-//    private val receivedCredentials = mutableListOf<Credential>()
-
+    
     init {
         // init the sdk
         SelfSDK.initialize(
@@ -97,6 +101,17 @@ class MainViewModel(context: Context): ViewModel() {
             log = { Timber.tag("SelfSDK").d(it) }
         )
 
+        val appAddress = getApplicationAddress()
+        if (appAddress.isNotEmpty()) {
+            viewModelScope.launch(Dispatchers.IO) {
+                initAccount(appAddress)
+            }
+        } else {
+            _appUiState.update { it.copy(initialization = InitializationState.UnRegistered) }
+        }
+    }
+
+    suspend fun initAccount(applicationAddress: String, onConnectCompletion: (() -> Unit)? = null) {
         // the sdk will store data in this directory, make sure it exists.
         val storagePath = File(context.filesDir.absolutePath + "/account1")
         if (!storagePath.exists()) storagePath.mkdirs()
@@ -106,6 +121,7 @@ class MainViewModel(context: Context): ViewModel() {
             .setEnvironment(Environment.production)
             .setSandbox(true)
             .setStoragePath(storagePath.absolutePath)
+            .setApplicationAddress(applicationAddress)
             .setCallbacks(object : Account.Callbacks {
                 override fun onMessage(message: Message) {
                     Timber.tag("DemoApp").d("onMessage: ${message.id()}")
@@ -132,6 +148,8 @@ class MainViewModel(context: Context): ViewModel() {
                 }
                 override fun onConnect() {
                     Timber.tag("DemoApp").d("onConnect")
+                    onConnectCompletion?.invoke()
+
                     _appUiState.update {
                         it.copy(
                             initialization = InitializationState.Success
@@ -150,16 +168,16 @@ class MainViewModel(context: Context): ViewModel() {
             })
             .build()
 
-        _appUiState.update {
-            it.copy(
-                isRegistered = account.registered(),
-            )
-        }
+//        _appUiState.update {
+//            it.copy(
+//                isRegistered = account?.registered() ?: false,
+//            )
+//        }
     }
 
 
     fun isRegistered() : Boolean {
-        return account.registered()
+        return account?.registered() ?: false
     }
 
     // connect with server using an inbox address
@@ -168,7 +186,7 @@ class MainViewModel(context: Context): ViewModel() {
             _appUiState.update { it.copy(serverState = ServerState.Connecting) }
             serverInboxAddress = PublicKey(inboxAddress)
 
-            groupAddress = account.connectWith(serverInboxAddress!!, info = mapOf())
+            groupAddress = account?.connectWith(serverInboxAddress!!, info = mapOf())
             if (groupAddress != null) {
                 _appUiState.update { it.copy(serverState = ServerState.Success) }
             } else {
@@ -182,7 +200,7 @@ class MainViewModel(context: Context): ViewModel() {
 
     suspend fun connect(inboxAddress: PublicKey, qrCode: ByteArray) {
         try {
-            groupAddress = account.connectWith(qrCode)
+            groupAddress = account?.connectWith(qrCode)
             serverInboxAddress = inboxAddress
 
             if (groupAddress != null) {
@@ -221,7 +239,7 @@ class MainViewModel(context: Context): ViewModel() {
             .build()
 
         // send chat to server
-        val messageId = account.send(toAddress = serverInboxAddress!!, chat)
+        val messageId = account?.send(toAddress = serverInboxAddress!!, chat)
         _appUiState.update { it.copy(requestState = ServerRequestState.RequestSent) }
 
         startRequestTimeout()
@@ -240,5 +258,12 @@ class MainViewModel(context: Context): ViewModel() {
     }
     private fun cancelRequestTimeout() {
         requestTimeoutJob?.cancel()
+    }
+
+    fun saveApplicationAddress(address: String) {
+        sharedPreferences.edit().putString(appAddressKey, address).apply()
+    }
+    fun getApplicationAddress(): String {
+        return sharedPreferences.getString(appAddressKey, "") ?: ""
     }
 }
