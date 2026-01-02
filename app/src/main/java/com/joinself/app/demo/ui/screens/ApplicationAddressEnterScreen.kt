@@ -57,7 +57,7 @@ fun ApplicationAddressEnterScreen(
                 // Hero Section
                 HeroSection(
                     icon = Icons.Filled.PrivateConnectivity,
-                    title = "Register by Address",
+                    title = "Application Address",
                     subtitle = "Enter the application address to register your Self account."
                 )
             }
@@ -123,7 +123,7 @@ fun ApplicationAddressEnterScreen(
                 // Primary Button - now part of scrollable content
                 Spacer(modifier = Modifier.height(AppSpacing.buttonTopSpacing))
                 PrimaryButton(
-                    title = "Register",
+                    title = "Enter",
                     onClick = { 
                         focusManager.clearFocus()
                         onContinue(serverAddress) 

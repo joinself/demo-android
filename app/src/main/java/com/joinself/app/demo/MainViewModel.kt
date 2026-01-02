@@ -51,6 +51,7 @@ sealed class ServerRequestState {
 }
 sealed class BackupRestoreState {
     data object None: BackupRestoreState()
+    data object RestoreStart: BackupRestoreState()
     data object Processing: BackupRestoreState()
     data object Success: BackupRestoreState()
     data class  Error(val message: String): BackupRestoreState()
