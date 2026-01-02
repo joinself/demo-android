@@ -176,12 +176,12 @@ fun SelfDemoApp(
         composable<MainRoute.Registration> {
             RegistrationIntroScreen( selfModifier = selfModifier,
                 onStartRegistration = {
-                    coroutineScope.launch {
-                        navController.navigate(MainRoute.EnterApplicationAddress)
-                    }
+                    viewModel.setBackupRestoreState(BackupRestoreState.None)
+                    navController.navigate(MainRoute.EnterApplicationAddress)
                 },
                 onStartRestore = {
-                    navController.navigate(MainRoute.RestoreStart)
+                    viewModel.setBackupRestoreState(BackupRestoreState.RestoreStart)
+                    navController.navigate(MainRoute.EnterApplicationAddress)
                 },
                 onOpenSettings = onOpenSettings
             )
@@ -194,12 +194,19 @@ fun SelfDemoApp(
                             applicationAddress = address,
                             onConnectCompletion = {
                                 coroutineScope.launch {
-                                    viewModel.account?.openRegistrationFlow { isSuccess, error ->
-                                        if (isSuccess) {
-                                            viewModel.saveApplicationAddress(address)
+                                    if (appState.backupRestoreState == BackupRestoreState.RestoreStart) {
+                                        viewModel.saveApplicationAddress(address)
+                                        withContext(Dispatchers.Main) {
+                                            navController.navigate(MainRoute.RestoreStart)
+                                        }
+                                    } else {
+                                        viewModel.account?.openRegistrationFlow { isSuccess, error ->
+                                            if (isSuccess) {
+                                                viewModel.saveApplicationAddress(address)
 
-                                            coroutineScope.launch(Dispatchers.Main) {
-                                                navController.navigate(MainRoute.ConnectToServerSelection)
+                                                coroutineScope.launch(Dispatchers.Main) {
+                                                    navController.navigate(MainRoute.ConnectToServerSelection)
+                                                }
                                             }
                                         }
                                     }
