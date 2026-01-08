@@ -2,6 +2,7 @@ package com.joinself.app.demo
 
 import android.content.Intent
 import android.util.Log
+import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
@@ -237,6 +238,8 @@ fun SelfDemoApp(
                                     withContext(Dispatchers.Main) {
                                         if (appState.serverState is ServerState.Success) {
                                             navController.navigate(MainRoute.ServerConnectionReady)
+                                        } else {
+                                            Toast.makeText(context, "Failed to connect to server", Toast.LENGTH_LONG).show()
                                         }
                                     }
                                 }
