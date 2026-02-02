@@ -3,10 +3,9 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
     alias(libs.plugins.android.application)
-    alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
-    id("com.github.triplet.play") version "3.13.0"
+    id("com.github.triplet.play") version "4.0.0"
     id("com.gladed.androidgitversion")
 }
 
@@ -22,6 +21,10 @@ androidGitVersion {
     isUntrackedIsDirty = false
     untrackedIsDirty = false
     format = "%tag%%-count%%-commit%%-branch%"
+}
+
+base {
+    archivesName.set("self-demo-${androidGitVersion.name()}")
 }
 
 android {
@@ -40,7 +43,7 @@ android {
             abiFilters.clear()
             abiFilters.add("arm64-v8a")
         }
-        setProperty("archivesBaseName", "self-demo-${versionName}")
+
         missingDimensionStrategy("version", "public")
     }
     signingConfigs {
