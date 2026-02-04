@@ -193,11 +193,13 @@ fun SelfDemoApp(
         composable<MainRoute.EnterApplicationAddress> {
             ApplicationAddressEnterScreen(
                 onContinue = { address ->
+                    isLoading = true
                     coroutineScope.launch(Dispatchers.IO) {
                         viewModel.initAccount(
                             applicationAddress = address,
                             onConnectCompletion = {
                                 coroutineScope.launch {
+                                    isLoading = false
                                     if (appState.backupRestoreState == BackupRestoreState.RestoreStart) {
                                         viewModel.saveApplicationAddress(address)
                                         withContext(Dispatchers.Main) {
