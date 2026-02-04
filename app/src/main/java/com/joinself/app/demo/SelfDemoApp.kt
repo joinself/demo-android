@@ -17,6 +17,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -69,6 +70,7 @@ import com.joinself.sdk.ui.openRegistrationFlow
 import com.joinself.sdk.ui.openRestoreFlow
 import com.joinself.sdk.utils.popAllBackStacks
 import com.joinself.ui.component.LoadingDialog
+import com.joinself.ui.component.LoadingIndicator
 import com.joinself.ui.theme.SelfModifier
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -127,6 +129,7 @@ fun SelfDemoApp(
     val appState by viewModel.appStateFlow.collectAsState()
 
     var credentialType by remember { mutableStateOf("") }
+    var isLoading by rememberSaveable { mutableStateOf(false) }
 
     fun shareLogfile() {
         val logPath = context.cacheDir.absolutePath + "/file0.log"
@@ -201,12 +204,13 @@ fun SelfDemoApp(
                                             navController.navigate(MainRoute.RestoreStart)
                                         }
                                     } else {
-                                        viewModel.account?.openRegistrationFlow { isSuccess, error ->
-                                            if (isSuccess) {
+                                        viewModel.account?.openRegistrationFlow { messagingKey, error ->
+                                            if (messagingKey != null) {
                                                 viewModel.saveApplicationAddress(address)
+                                                viewModel.serverInboxAddress = messagingKey
 
                                                 coroutineScope.launch(Dispatchers.Main) {
-                                                    navController.navigate(MainRoute.ConnectToServerSelection)
+                                                    navController.navigate(MainRoute.ServerConnectionReady)
                                                 }
                                             }
                                         }
@@ -231,10 +235,12 @@ fun SelfDemoApp(
                                     return@openQRCodeFlow
                                 }
 
+                                isLoading = true
                                 coroutineScope.launch(Dispatchers.IO) {
                                     // then connect with the connection in the qrcode
                                     viewModel.connect(inboxAddress = discoveryData.address, qrCode = qrCode)
 
+                                    isLoading = false
                                     withContext(Dispatchers.Main) {
                                         if (appState.serverState is ServerState.Success) {
                                             navController.navigate(MainRoute.ServerConnectionReady)
@@ -685,6 +691,12 @@ fun SelfDemoApp(
                     navController.popBackStack()
                 }
             )
+        }
+    }
+
+    if (isLoading) {
+        Dialog(onDismissRequest = { isLoading = false }) {
+            LoadingIndicator(selfModifier)
         }
     }
 

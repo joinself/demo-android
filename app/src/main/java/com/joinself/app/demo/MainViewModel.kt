@@ -89,7 +89,6 @@ class MainViewModel(val context: Context): ViewModel() {
 
     var account: Account? = null
     var serverInboxAddress: PublicKey? = null
-    private var groupAddress: PublicKey? = null
     private var credentialRequest: CredentialRequest? = null
     private var verificationRequest: VerificationRequest? = null
     private var requestTimeoutJob: Job? = null
@@ -187,7 +186,7 @@ class MainViewModel(val context: Context): ViewModel() {
             _appUiState.update { it.copy(serverState = ServerState.Connecting) }
             serverInboxAddress = PublicKey(inboxAddress)
 
-            groupAddress = account?.connectWith(serverInboxAddress!!, info = mapOf())
+            val groupAddress = account?.connectWith(serverInboxAddress!!, info = mapOf())
             if (groupAddress != null) {
                 _appUiState.update { it.copy(serverState = ServerState.Success) }
             } else {
@@ -201,7 +200,7 @@ class MainViewModel(val context: Context): ViewModel() {
 
     suspend fun connect(inboxAddress: PublicKey, qrCode: ByteArray) {
         try {
-            groupAddress = account?.connectWith(qrCode)
+            val groupAddress = account?.connectWith(qrCode)
             serverInboxAddress = inboxAddress
 
             if (groupAddress != null) {
