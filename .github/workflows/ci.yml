@@ -23,4 +23,5 @@ jobs:
         run: |
           . ${GITHUB_WORKSPACE}/.ci/env
 
-          ${CI_SCRIPTS}/workflow-run joinself/demo-android-gha CI
+          gh workflow run CI -R joinself/demo-android-gha -r main -f id=${WORKFLOW_ID} -f git-ref=${CI_REF_NAME}
+          ${CI_SCRIPTS}/workflow-wait joinself/demo-android-gha ${WORKFLOW_ID}
