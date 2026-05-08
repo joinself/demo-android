@@ -9,20 +9,25 @@ on:
       - main
   workflow_dispatch:
 
+concurrency:
+  group: ${{ github.workflow }}
+
+defaults:
+  run:
+    shell: bash
+
 jobs:
   ci:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
-      - name: Setup job
-        uses: joinself/github-actions-public/setup-job@main
+      - uses: joinself/actions-public/setup-job@main
+      - uses: actions/checkout@v6
       - name: CI
-        shell: bash
         env:
           GH_TOKEN: ${{ secrets.GH_PAT_DEMO_ANDROID_GHA }}
           WORKFLOW_ID: ${{ github.run_id }}${{github.run_attempt}}
         run: |
-          . ${GITHUB_WORKSPACE}/.ci/env
-
           echo "Calling remote workflow: joinself/demo-android-gha - CI (${WORKFLOW_ID})"
-          gh workflow run CI -R joinself/demo-android-gha -r main -f id=${WORKFLOW_ID} -f git-ref=${CI_REF_NAME}
-          ${CI_SCRIPTS}/workflow-wait joinself/demo-android-gha ${WORKFLOW_ID}
+          gh workflow run CI -R joinself/demo-android-gha -r main -f id=${WORKFLOW_ID} -f git-ref=${GITHUB_HEAD_REF:-$GITHUB_REF_NAME}
+          ${SCRIPTS}/workflow-wait joinself/demo-android-gha ${WORKFLOW_ID}
